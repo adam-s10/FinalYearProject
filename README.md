@@ -1,7 +1,10 @@
 # FinalYearProject
-# Author: Adam Steinmetz - 2045195
-# Supervisor: Stephen Swift
-# Project Title: Does the “No Free Lunch” theorem apply to standard classifiers run on data and what constitutes a similar dataset?
+# Author: 
+Adam Steinmetz - 2045195
+# Supervisor: 
+Stephen Swift
+# Project Title: 
+Does the “No Free Lunch” theorem apply to standard classifiers run on data and what constitutes a similar dataset?
 # Problem Definition:
 With AI becoming more prominent in both Industry and Academia, gathering, and analyzing large data sets is becoming more important. 
 I will be implementing a web scraper that will download open-source data to be used by AI models. Furthermore, I will be evaluating 
