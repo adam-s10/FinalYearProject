@@ -10,3 +10,6 @@ With AI becoming more prominent in both Industry and Academia, gathering, and an
 I will be implementing a web scraper that will download open-source data to be used by AI models. Furthermore, I will be evaluating 
 said collected data against standard classifiers to determine their fitness. To create a predictive AI for the best classifiers that 
 can be applied to a set of data. Thus, providing evidence to what “Similar” from the “No Free Lunch” theorem refers to. 
+
+Note: To use the Kaggle Data Scraper you will need to create an account and create some directories to place a kaggle.json file in. 
+This can be done by following this guide: https://www.kaggle.com/docs/api
