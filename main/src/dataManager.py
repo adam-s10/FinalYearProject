@@ -3,6 +3,8 @@ import logging
 import sys
 import time
 import shutil
+import pandas as pd
+import numpy as np
 
 # Instantiate Logger
 logger = logging.getLogger()
@@ -16,6 +18,7 @@ logger.addHandler(handler)
 new_path_for_csvs = "/Users/adam/PycharmProjects/FinalYearProject/csvDatasets"
 download_path_zips = "/Users/adam/PycharmProjects/FinalYearProject/zips/"
 extraction_path_datasets = "/Users/adam/PycharmProjects/FinalYearProject/extractedZips/"
+reformat_csvs_path = "/Users/adam/PycharmProjects/FinalYearProject/csvDatasets"
 
 
 def csv_cleanup_service():
@@ -47,3 +50,40 @@ def __delete_unused_files(path):
     time.sleep(10)
     shutil.rmtree(path)
     logger.info(f"Deletion complete in path --> {path}")
+
+
+def __reformat_csvs():
+    list_of_files = os.listdir(reformat_csvs_path)
+    for file in list_of_files:
+        logger.info(f"__reformat_csvs: dropping first row for file --> {file}")
+        with open(f"{reformat_csvs_path}/{file}", 'r') as f:
+            with open(f"{reformat_csvs_path}/updated_{file}", 'w') as f1:
+                next(f)  # skip header line
+                for line in f:
+                    f1.write(line)
+
+    new_list_of_files = os.listdir(reformat_csvs_path)
+    for file in new_list_of_files:
+        if not file.startswith("updated_"):
+            logger.info(f"__reformat_csvs: removing file --> {file}")
+            os.remove(f"{reformat_csvs_path}/{file}")
+    __remove_csvs_with_non_numerical_data()
+
+
+def __remove_csvs_with_non_numerical_data():
+    list_of_files = os.listdir(reformat_csvs_path)
+    for file in list_of_files:
+        logger.info(f"Reading file: {file}")
+        try:
+            df = pd.read_csv(f"{reformat_csvs_path}/{file}")
+            print(df)
+            array_2d = df.to_numpy()
+            print(array_2d)
+            array_2d.astype(float)
+        except:
+            logger.info(f"File: {file} could not be read/converted to 2D array, deleting")
+            os.remove(f"{reformat_csvs_path}/{file}")
+
+
+# __reformat_csvs()
+# new_function()

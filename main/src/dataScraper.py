@@ -49,7 +49,7 @@ def __list_dataset_names():
         else:
             data_still_available = False
     logger.info(f"list_dataset_names: Number of pages visited --> {count}")
-    logger.info(f"list_dataset_names: Number of extractedZips scraped: {len(full_dataset_list)}")
+    logger.info(f"list_dataset_names: Number of extractedZips scraped --> {len(full_dataset_list)}")
     print(f"/n Complete Data Set: {full_dataset_list}")
     return full_dataset_list
 
@@ -58,7 +58,10 @@ def __download_datasets(dataset_list_as_strings):
     logger.info("download_datasets: Download Starting!")
     for word in dataset_list_as_strings:
         path = f"{download_path_zips}{word.split('/')[1]}"
-        api.dataset_download_cli(dataset=word, path=path)
+        try:
+            api.dataset_download_cli(dataset=word, path=path)
+        except:
+            logger.info(f"This data set could not be scraped --> {download_path_zips}{word.split('/')[1]}")
     # print("Download of extractedZips complete")
     logger.info("download_datasets: Download Complete!")
 
