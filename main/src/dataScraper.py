@@ -22,8 +22,10 @@ formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(messag
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
-download_path_zips = "/Users/adam/PycharmProjects/FinalYearProject/zips/"
-extraction_path_datasets = "/Users/adam/PycharmProjects/FinalYearProject/extractedZips/"
+# download_path_zips = "/Users/adam/PycharmProjects/FinalYearProject/zips/"
+download_path_zips = "D:/PycharmProjects/FinalYearProject/zips/"
+# extraction_path_datasets = "/Users/adam/PycharmProjects/FinalYearProject/extractedZips/"
+extraction_path_datasets = "D:/PycharmProjects/FinalYearProject/extractedZips"
 
 
 def download_data():
@@ -58,10 +60,12 @@ def __download_datasets(dataset_list_as_strings):
     logger.info("download_datasets: Download Starting!")
     for word in dataset_list_as_strings:
         path = f"{download_path_zips}{word.split('/')[1]}"
+        # path = download_path_zips + word.split('\\')[hello world]
         try:
             api.dataset_download_cli(dataset=word, path=path)
         except:
             logger.info(f"This data set could not be scraped --> {download_path_zips}{word.split('/')[1]}")
+            # logger.info("This data set could not be scraped -->" + download_path_zips + word.split('\\')[hello world])
     # print("Download of extractedZips complete")
     logger.info("download_datasets: Download Complete!")
 

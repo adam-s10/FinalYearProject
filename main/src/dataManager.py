@@ -4,6 +4,8 @@ import sys
 import time
 import shutil
 import pandas as pd
+from pathlib import Path
+import zipfile
 import numpy as np
 
 # Instantiate Logger
@@ -15,44 +17,60 @@ formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(messag
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
-new_path_for_csvs = "/Users/adam/PycharmProjects/FinalYearProject/csvDatasets"
-download_path_zips = "/Users/adam/PycharmProjects/FinalYearProject/zips/"
-extraction_path_datasets = "/Users/adam/PycharmProjects/FinalYearProject/extractedZips/"
-reformat_csvs_path = "/Users/adam/PycharmProjects/FinalYearProject/csvDatasets"
+# new_path_for_csvs = "/Users/adam/PycharmProjects/FinalYearProject/csvDatasets"
+new_path_for_csvs = "D:/PycharmProjects/FinalYearProject/csvDatasets"
+# download_path_zips = "/Users/adam/PycharmProjects/FinalYearProject/zips/"
+download_path_zips = "D:/PycharmProjects/FinalYearProject/zips/"
+# extraction_path_datasets = "/Users/adam/PycharmProjects/FinalYearProject/extractedZips/"
+extraction_path_datasets = "D:/PycharmProjects/FinalYearProject/extractedZips/"
+# reformat_csvs_path = "/Users/adam/PycharmProjects/FinalYearProject/csvDatasets"
+reformat_csvs_path = "D:/PycharmProjects/FinalYearProject/csvDatasets"
 
 
 def csv_cleanup_service():
     logger.info("csv_cleanup_service: Beginning Cleanup...")
-    __get_list_of_csvs()
+    get_list_of_csvs()
 
 
-def __get_list_of_csvs():
+# Finds CSV's in a given path and adds them to blacklist
+# Then sends blacklist to move_csvs
+def get_list_of_csvs():
     blacklist = []
-    for root, dirs, files in os.walk(extraction_path_datasets):
+    # for root, dirs, files in os.walk(extraction_path_datasets):
+    for root, dirs, files in os.walk("D:/PycharmProjects/FinalYearProject/test/extractedZips/"):
         for f in files:
+            print(f"{f} is being evaluated")
             if f.endswith(".csv"):
                 blacklist.append(os.path.join(root, f))
                 logger.info(f"__get_list_of_csvs: Added file to blacklist --> {f}")
-    __move_csvs(blacklist)
+    move_csvs(blacklist)
 
 
-def __move_csvs(blacklist):
+# Takes blacklist as the input containing a list of paths to csv files
+# Moves them to a new directory to save them from deletion
+def move_csvs(blacklist):
     for path in blacklist:
         temp = path.split("/")
         print(f"{new_path_for_csvs}/{len(temp) - 1}")
-        shutil.copy(path, new_path_for_csvs)
+        # shutil.copy(path, new_path_for_csvs)
+        logger.info(f"Moving file in blacklist --> {path} to --> {new_path_for_csvs}")
+        shutil.copy(path, "D:/PycharmProjects/FinalYearProject/test/csvDatasets")
+        print(type(path), path)
         logger.info(f"__move_csvs: Moved file {path} in blacklist to provided directory {new_path_for_csvs}")
-    __delete_unused_files(extraction_path_datasets)
+    # __delete_unused_files(extraction_path_datasets)
+    delete_unused_files("D:/PycharmProjects/FinalYearProject/test/extractedZips/")
+#     TODO: add remove file from zip directory
 
 
-def __delete_unused_files(path):
-    logger.warning(f"This directory will be DELETED in path --> {path}, in 10 seconds...")
-    time.sleep(10)
-    shutil.rmtree(path)
+def delete_unused_files(path):
+    logger.warning(f"This directory will be DELETED in path --> {path}, in 2 seconds...")
+    time.sleep(2)
+    # shutil.rmtree(path)
     logger.info(f"Deletion complete in path --> {path}")
 
 
-def __reformat_csvs():
+# Removes the top line from the CSV's
+def reformat_csvs():
     list_of_files = os.listdir(reformat_csvs_path)
     for file in list_of_files:
         logger.info(f"__reformat_csvs: dropping first row for file --> {file}")
@@ -67,10 +85,10 @@ def __reformat_csvs():
         if not file.startswith("updated_"):
             logger.info(f"__reformat_csvs: removing file --> {file}")
             os.remove(f"{reformat_csvs_path}/{file}")
-    __remove_csvs_with_non_numerical_data()
+    remove_csvs_with_non_numerical_data()
 
 
-def __remove_csvs_with_non_numerical_data():
+def remove_csvs_with_non_numerical_data():
     list_of_files = os.listdir(reformat_csvs_path)
     for file in list_of_files:
         logger.info(f"Reading file: {file}")
@@ -85,5 +103,38 @@ def __remove_csvs_with_non_numerical_data():
             os.remove(f"{reformat_csvs_path}/{file}")
 
 
-# __reformat_csvs()
+def extract_data():
+    extracted_locations = []
+    zip_location = os.walk("D:/PycharmProjects/FinalYearProject/zips")
+    # for word in zip_location:
+    #     # print(f"Here is the file name: {word}")
+    #     # # file_name = word.split('\\')[hello world]
+    #     # zipfile_location = f"{download_path_zips}{word}"
+    #     extracted_to = f"{extraction_path_datasets}{word}"
+    #     path = Path(zipfile_location)
+    #     for i in path.glob("*.zip"):
+    #         with zipfile.ZipFile(i, "r") as Zip:
+    #             Zip.extractall(extracted_to)
+    #
+    #     extracted_locations.append(word)
+    # directories = os.listdir(download_path_zips)
+    directories = os.listdir("D:/PycharmProjects/FinalYearProject/test/zips/")
+    for d in directories:
+        print(d)
+        # path = Path(f"{download_path_zips}{d}")
+        path = Path(f"D:/PycharmProjects/FinalYearProject/test/zips/{d}")
+        for i in path.glob("*.zip"):
+            logger.info(f"File to be extracted --> {i}")
+            # extracted_to = f"{extraction_path_datasets}{d}"
+            extracted_to = f"D:/PycharmProjects/FinalYearProject/test/extractedZips/{d}"
+            with zipfile.ZipFile(i, 'r') as Zip:
+                Zip.extractall(extracted_to)
+            logger.info(f"File successfully extracted --> {i}")
+        get_list_of_csvs()
+        delete_unused_files(f"D:/PycharmProjects/FinalYearProject/test/zips/{d}")
+    # print(extracted_locations)
+
+
+extract_data()
+# reformat_csvs()
 # new_function()
