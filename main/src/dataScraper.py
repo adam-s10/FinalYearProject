@@ -45,7 +45,7 @@ def __list_dataset_names():
     while data_still_available:
         datasets = api.dataset_list(page=count, tag_ids="classification", file_type="csv")
         if len(datasets) != 0:
-        # if count < 2:
+        # if count < 2: #Used only to test
             full_dataset_list += datasets
             count += 1
         else:
@@ -65,8 +65,6 @@ def __download_datasets(dataset_list_as_strings):
             api.dataset_download_cli(dataset=word, path=path)
         except:
             logger.info(f"This data set could not be scraped --> {download_path_zips}{word.split('/')[1]}")
-            # logger.info("This data set could not be scraped -->" + download_path_zips + word.split('\\')[hello world])
-    # print("Download of extractedZips complete")
     logger.info("download_datasets: Download Complete!")
 
 

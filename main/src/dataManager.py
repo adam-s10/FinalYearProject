@@ -63,47 +63,64 @@ def move_csvs(blacklist):
 
 
 def delete_unused_files(path):
-    logger.warning(f"This directory will be DELETED in path --> {path}, in 2 seconds...")
-    time.sleep(2)
-    # shutil.rmtree(path)
-    logger.info(f"Deletion complete in path --> {path}")
+    try:
+        logger.warning(f"This directory will be DELETED in path --> {path}, in 2 seconds...")
+        time.sleep(2)
+        shutil.rmtree(path)
+        logger.info(f"Deletion complete in path --> {path}")
+    except:
+        logger.info(f"Deletion path--> {path} failed")
 
 
 # Removes the top line from the CSV's
-def reformat_csvs():
-    list_of_files = os.listdir(reformat_csvs_path)
+def reformat_csvs(path):
+    # list_of_files = os.listdir(reformat_csvs_path)
+    list_of_files = os.listdir(path)
     for file in list_of_files:
         logger.info(f"__reformat_csvs: dropping first row for file --> {file}")
-        with open(f"{reformat_csvs_path}/{file}", 'r') as f:
-            with open(f"{reformat_csvs_path}/updated_{file}", 'w') as f1:
-                next(f)  # skip header line
-                for line in f:
-                    f1.write(line)
+        try:
+            with open(f"{path}/{file}", 'r') as f:
+                with open(f"{path}/updated_{file}", 'w') as f1:
+                    next(f)  # skip header line
+                    for line in f:
+                        f1.write(line)
+        except:
+            logger.info(f"reformat_csvs: dropping first row failed for file --> {file}")
 
-    new_list_of_files = os.listdir(reformat_csvs_path)
+    # new_list_of_files = os.listdir(reformat_csvs_path)
+    new_list_of_files = os.listdir(path)
     for file in new_list_of_files:
         if not file.startswith("updated_"):
             logger.info(f"__reformat_csvs: removing file --> {file}")
-            os.remove(f"{reformat_csvs_path}/{file}")
-    remove_csvs_with_non_numerical_data()
+            os.remove(f"{path}/{file}")
+    remove_csvs_with_non_numerical_data(path)
 
 
-def remove_csvs_with_non_numerical_data():
-    list_of_files = os.listdir(reformat_csvs_path)
+def remove_csvs_with_non_numerical_data(path):
+    # list_of_files = os.listdir(reformat_csvs_path)
+    removed_files = 0
+    kept_files = 0
+    list_of_files = os.listdir(path)
     for file in list_of_files:
-        logger.info(f"Reading file: {file}")
+        logger.info(f"remove_csvs_with_non_numerical_data: Reading file--> {file}")
         try:
-            df = pd.read_csv(f"{reformat_csvs_path}/{file}")
-            print(df)
+            df = pd.read_csv(f"{path}/{file}", header=None)
+            # print(df)
             array_2d = df.to_numpy()
-            print(array_2d)
+            # print(array_2d)
             array_2d.astype(float)
+            logger.info(f"remove_csvs_with_non_numerical_data: File--> {file} only contains numbers, will not be deleted")
+            kept_files += 1
         except:
-            logger.info(f"File: {file} could not be read/converted to 2D array, deleting")
-            os.remove(f"{reformat_csvs_path}/{file}")
+            logger.info(f"remove_csvs_with_non_numerical_data: File--> {file} conversion failed, deleting")
+            os.remove(f"{path}/{file}")
+            removed_files += 1
+
+    logger.info(f"Number of kept files --> {kept_files}")
+    logger.info(f"Number of removed files --> {removed_files}")
 
 
-def extract_data():
+def extract_data(path_given):
     extracted_locations = []
     zip_location = os.walk("D:/PycharmProjects/FinalYearProject/zips")
     # for word in zip_location:
@@ -118,23 +135,34 @@ def extract_data():
     #
     #     extracted_locations.append(word)
     # directories = os.listdir(download_path_zips)
-    directories = os.listdir("D:/PycharmProjects/FinalYearProject/test/zips/")
+    extraction_failures = 0
+    directories = os.listdir(path_given)
     for d in directories:
         print(d)
         # path = Path(f"{download_path_zips}{d}")
-        path = Path(f"D:/PycharmProjects/FinalYearProject/test/zips/{d}")
+        path = Path(f"{path_given}/{d}")
         for i in path.glob("*.zip"):
             logger.info(f"File to be extracted --> {i}")
             # extracted_to = f"{extraction_path_datasets}{d}"
             extracted_to = f"D:/PycharmProjects/FinalYearProject/test/extractedZips/{d}"
-            with zipfile.ZipFile(i, 'r') as Zip:
-                Zip.extractall(extracted_to)
-            logger.info(f"File successfully extracted --> {i}")
+            try:
+                with zipfile.ZipFile(i, 'r') as Zip:
+                    Zip.extractall(extracted_to)
+                logger.info(f"File successfully extracted --> {i}")
+            except:
+                logger.info(f"Failed to Extract data--> {d}")
+                extraction_failures += 1
+
         get_list_of_csvs()
-        delete_unused_files(f"D:/PycharmProjects/FinalYearProject/test/zips/{d}")
+        delete_unused_files(f"{path_given}/{d}")
     # print(extracted_locations)
+    # reformat_csvs(path_given)
+    logger.info(f"Extraction Failures --> {extraction_failures}")
+    reformat_csvs("D:/PycharmProjects/FinalYearProject/test/csvDatasets")
 
 
-extract_data()
-# reformat_csvs()
-# new_function()
+# extract_data()
+test_csv_reformatting = "D:/PycharmProjects/FinalYearProject/test/csvDatasets"
+test_csv_reformatting_live_data = "C:/Users/Adam/FinalYearProject_TestData"
+# reformat_csvs(test_csv_reformatting)
+extract_data(test_csv_reformatting_live_data)
