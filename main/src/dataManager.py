@@ -34,10 +34,10 @@ def csv_cleanup_service():
 
 # Finds CSV's in a given path and adds them to blacklist
 # Then sends blacklist to move_csvs
-def get_list_of_csvs():
+def get_list_of_csvs(extracted_path):
     blacklist = []
     # for root, dirs, files in os.walk(extraction_path_datasets):
-    for root, dirs, files in os.walk("D:/PycharmProjects/FinalYearProject/test/extractedZips/"):
+    for root, dirs, files in os.walk(extracted_path):
         for f in files:
             print(f"{f} is being evaluated")
             if f.endswith(".csv"):
@@ -58,7 +58,8 @@ def move_csvs(blacklist):
         print(type(path), path)
         logger.info(f"__move_csvs: Moved file {path} in blacklist to provided directory {new_path_for_csvs}")
     # __delete_unused_files(extraction_path_datasets)
-    delete_unused_files("D:/PycharmProjects/FinalYearProject/test/extractedZips/")
+    # delete_unused_files("D:/PycharmProjects/FinalYearProject/test/extractedZips/")
+    delete_unused_files(extraction_path_datasets)
 #     TODO: add remove file from zip directory
 
 
@@ -76,6 +77,7 @@ def delete_unused_files(path):
 def reformat_csvs(path):
     # list_of_files = os.listdir(reformat_csvs_path)
     list_of_files = os.listdir(path)
+    removed_files = 0
     for file in list_of_files:
         logger.info(f"__reformat_csvs: dropping first row for file --> {file}")
         try:
@@ -86,7 +88,10 @@ def reformat_csvs(path):
                         f1.write(line)
         except:
             logger.info(f"reformat_csvs: dropping first row failed for file --> {file}")
+            os.remove(f"{path}/{file}")
+            removed_files += 1
 
+    logger.info(f"reformat_csvs: amount of removed files --> {removed_files}")
     # new_list_of_files = os.listdir(reformat_csvs_path)
     new_list_of_files = os.listdir(path)
     for file in new_list_of_files:
@@ -116,13 +121,13 @@ def remove_csvs_with_non_numerical_data(path):
             os.remove(f"{path}/{file}")
             removed_files += 1
 
-    logger.info(f"Number of kept files --> {kept_files}")
-    logger.info(f"Number of removed files --> {removed_files}")
+    logger.info(f"Non Numerical Data: Number of kept files --> {kept_files}")
+    logger.info(f"Non Numerical Data: Number of removed files --> {removed_files}")
 
 
 def extract_data(path_given):
-    extracted_locations = []
-    zip_location = os.walk("D:/PycharmProjects/FinalYearProject/zips")
+    # extracted_locations = []
+    # zip_location = os.walk("D:/PycharmProjects/FinalYearProject/zips")
     # for word in zip_location:
     #     # print(f"Here is the file name: {word}")
     #     # # file_name = word.split('\\')[hello world]
@@ -143,8 +148,8 @@ def extract_data(path_given):
         path = Path(f"{path_given}/{d}")
         for i in path.glob("*.zip"):
             logger.info(f"File to be extracted --> {i}")
-            # extracted_to = f"{extraction_path_datasets}{d}"
-            extracted_to = f"D:/PycharmProjects/FinalYearProject/test/extractedZips/{d}"
+            extracted_to = f"{extraction_path_datasets}{d}"
+            # extracted_to = f"D:/PycharmProjects/FinalYearProject/test/extractedZips/{d}"
             try:
                 with zipfile.ZipFile(i, 'r') as Zip:
                     Zip.extractall(extracted_to)
@@ -153,7 +158,7 @@ def extract_data(path_given):
                 logger.info(f"Failed to Extract data--> {d}")
                 extraction_failures += 1
 
-        get_list_of_csvs()
+        get_list_of_csvs(extraction_path_datasets)
         delete_unused_files(f"{path_given}/{d}")
     # print(extracted_locations)
     # reformat_csvs(path_given)
@@ -165,4 +170,6 @@ def extract_data(path_given):
 test_csv_reformatting = "D:/PycharmProjects/FinalYearProject/test/csvDatasets"
 test_csv_reformatting_live_data = "C:/Users/Adam/FinalYearProject_TestData"
 # reformat_csvs(test_csv_reformatting)
-extract_data(test_csv_reformatting_live_data)
+# extract_data(test_csv_reformatting_live_data)
+extract_data(download_path_zips)
+
