@@ -11,6 +11,7 @@ import sys
 api = KaggleApi()
 api.authenticate()
 
+
 # Instantiate Logger
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
