@@ -6,7 +6,6 @@ import shutil
 import pandas as pd
 from pathlib import Path
 import zipfile
-import numpy as np
 
 # Instantiate Logger
 logger = logging.getLogger()
@@ -17,13 +16,9 @@ formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(messag
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
-# new_path_for_csvs = "/Users/adam/PycharmProjects/FinalYearProject/csvDatasets"
 new_path_for_csvs = "D:/PycharmProjects/FinalYearProject/csvDatasets"
-# download_path_zips = "/Users/adam/PycharmProjects/FinalYearProject/zips/"
 download_path_zips = "D:/PycharmProjects/FinalYearProject/zips/"
-# extraction_path_datasets = "/Users/adam/PycharmProjects/FinalYearProject/extractedZips/"
 extraction_path_datasets = "D:/PycharmProjects/FinalYearProject/extractedZips/"
-# reformat_csvs_path = "/Users/adam/PycharmProjects/FinalYearProject/csvDatasets"
 reformat_csvs_path = "D:/PycharmProjects/FinalYearProject/csvDatasets"
 
 
@@ -36,7 +31,6 @@ def csv_cleanup_service():
 # Then sends blacklist to move_csvs
 def get_list_of_csvs(extracted_path):
     blacklist = []
-    # for root, dirs, files in os.walk(extraction_path_datasets):
     for root, dirs, files in os.walk(extracted_path):
         for f in files:
             print(f"{f} is being evaluated")
@@ -57,10 +51,7 @@ def move_csvs(blacklist):
         shutil.copy(path, "D:/PycharmProjects/FinalYearProject/test/csvDatasets")
         print(type(path), path)
         logger.info(f"__move_csvs: Moved file {path} in blacklist to provided directory {new_path_for_csvs}")
-    # __delete_unused_files(extraction_path_datasets)
-    # delete_unused_files("D:/PycharmProjects/FinalYearProject/test/extractedZips/")
     delete_unused_files(extraction_path_datasets)
-#     TODO: add remove file from zip directory
 
 
 def delete_unused_files(path):
@@ -123,30 +114,14 @@ def remove_csvs_with_non_numerical_data(path):
 
 
 def extract_data(path_given):
-    # extracted_locations = []
-    # zip_location = os.walk("D:/PycharmProjects/FinalYearProject/zips")
-    # for word in zip_location:
-    #     # print(f"Here is the file name: {word}")
-    #     # # file_name = word.split('\\')[hello world]
-    #     # zipfile_location = f"{download_path_zips}{word}"
-    #     extracted_to = f"{extraction_path_datasets}{word}"
-    #     path = Path(zipfile_location)
-    #     for i in path.glob("*.zip"):
-    #         with zipfile.ZipFile(i, "r") as Zip:
-    #             Zip.extractall(extracted_to)
-    #
-    #     extracted_locations.append(word)
-    # directories = os.listdir(download_path_zips)
     extraction_failures = 0
     directories = os.listdir(path_given)
     for d in directories:
         print(d)
-        # path = Path(f"{download_path_zips}{d}")
         path = Path(f"{path_given}/{d}")
         for i in path.glob("*.zip"):
             logger.info(f"File to be extracted --> {i}")
             extracted_to = f"{extraction_path_datasets}{d}"
-            # extracted_to = f"D:/PycharmProjects/FinalYearProject/test/extractedZips/{d}"
             try:
                 with zipfile.ZipFile(i, 'r') as Zip:
                     Zip.extractall(extracted_to)
@@ -157,8 +132,6 @@ def extract_data(path_given):
 
         get_list_of_csvs(extraction_path_datasets)
         delete_unused_files(f"{path_given}/{d}")
-    # print(extracted_locations)
-    # reformat_csvs(path_given)
     logger.info(f"Extraction Failures --> {extraction_failures}")
     reformat_csvs("D:/PycharmProjects/FinalYearProject/test/csvDatasets")
 

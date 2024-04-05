@@ -210,17 +210,6 @@ def run_all_classifiers():
 
 
 def cross_validation(classifier, a, b, classifier_name, file):
-    # Train classifier
-    # TODO: Change to cross validation - done
-    # try:
-    #     x_train, x_test, y_train, y_test = train_test_split(a, b, test_size=.25, random_state=0)
-    #     classifier.fit(x_train, y_train)
-    #     y_pred = classifier.predict(x_test)
-    #     acc = accuracy_score(y_pred, y_test)
-    #     write_accuracy_score(file, classifier_name, acc)
-    # except:
-    #     logger.warning("An error occurred")
-    #     write_accuracy_score(file, classifier_name, -1)
     acc = []
     try:
         skf = StratifiedKFold(n_splits=10)
@@ -239,9 +228,6 @@ def cross_validation(classifier, a, b, classifier_name, file):
     except:
         logger.info("An error occurred")
         write_accuracy_score(file, classifier_name, -1)
-        # Evaluate classifier
-        # acc = accuracy_score(y_test, y_pred)
-        # logger.info(f"SVM accuracy for {file} --> {acc}")
 
 
 def write_accuracy_score(file, classifier_name, acc):
@@ -251,27 +237,6 @@ def write_accuracy_score(file, classifier_name, acc):
     a = a.replace("]", "")
     f.write(f"{file},{classifier_name},{a}\n")
     f.close()
-
-
-def filter_csvs(csv_length, file):
-    if csv_length <= 2:
-        logger.warning(f"File has too few columns, skipping file --> {file}")
-        failed_files.append(file)
-        # write_results_to_txt(file, -1)
-        return -1
-
-    # If greater than xMB return -2
-    z = os.path.getsize(f"{path_to_csvs}/{file}")
-    logger.info(f"Size of file --> {z}")
-    z = z / 1000000
-    logger.info(f"Size of file in MB --> {z}")
-    if z > 4:
-        logger.warning(f"File is too big, skipping file --> {file}")
-        failed_files.append(file)
-        # write_results_to_txt(file, -2)
-        return -2
-    else:
-        return 1
 
 
 # get_tags_for_csvs()

@@ -1,6 +1,3 @@
-import os
-import glob
-import shutil
 import zipfile
 from pathlib import Path
 from kaggle.api.kaggle_api_extended import KaggleApi
@@ -21,20 +18,8 @@ formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(messag
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
-# download_path_zips = "/Users/adam/PycharmProjects/FinalYearProject/zips/"
 download_path_zips = "D:/PycharmProjects/FinalYearProject/zips/"
-# extraction_path_datasets = "/Users/adam/PycharmProjects/FinalYearProject/extractedZips/"
 extraction_path_datasets = "D:/PycharmProjects/FinalYearProject/extractedZips"
-
-# TODO: delete as part of reformatting
-# def download_data():
-#     __download_datasets(list_of_datasets)
-#     zip_cleanup_service()
-#
-#
-# def zip_cleanup_service():
-#     __extract_data(list_of_datasets)
-#     __delete_unused_files(download_path_zips)
 
 
 # Gathers the information needed to interact with api.download_datasets_cli
@@ -67,28 +52,6 @@ def __download_datasets(dataset_list_as_strings):
         except:
             logger.info(f"This data set could not be scraped --> {download_path_zips}{word.split('/')[1]}")
     logger.info("download_datasets: Download Complete!")
-
-
-# TODO: delete these as part of reformatting
-def __extract_data(directory):
-    extracted_locations = []
-    for word in directory:
-        file_name = word.split('/')[1]
-        zipfile_location = f"{download_path_zips}{file_name}"
-        extracted_to = f"{extraction_path_datasets}{file_name}"
-        path = Path(zipfile_location)
-        for i in path.glob("*.zip"):
-            with zipfile.ZipFile(i, "r") as Zip:
-                Zip.extractall(extracted_to)
-        extracted_locations.append(file_name)
-    print(extracted_locations)
-#
-#
-# def __delete_unused_files(path):
-#     logger.warning(f"This directory will be DELETED in path --> {path}, in 10 seconds...")
-#     time.sleep(10)
-#     shutil.rmtree(path)
-#     logger.info(f"Deletion complete in path --> {path}")
 
 
 list_of_datasets = [str(x) for x in __list_dataset_names()]
