@@ -75,11 +75,10 @@ def delete_unused_files(path):
 
 # Removes the top line from the CSV's
 def reformat_csvs(path):
-    # list_of_files = os.listdir(reformat_csvs_path)
     list_of_files = os.listdir(path)
     removed_files = 0
     for file in list_of_files:
-        logger.info(f"__reformat_csvs: dropping first row for file --> {file}")
+        logger.info(f"reformat_csvs: dropping first row for file --> {file}")
         try:
             with open(f"{path}/{file}", 'r') as f:
                 with open(f"{path}/updated_{file}", 'w') as f1:
@@ -92,7 +91,6 @@ def reformat_csvs(path):
             removed_files += 1
 
     logger.info(f"reformat_csvs: amount of removed files --> {removed_files}")
-    # new_list_of_files = os.listdir(reformat_csvs_path)
     new_list_of_files = os.listdir(path)
     for file in new_list_of_files:
         if not file.startswith("updated_"):
@@ -101,8 +99,8 @@ def reformat_csvs(path):
     remove_csvs_with_non_numerical_data(path)
 
 
+# Attempts to convert csv to a float. If this fails file will be deleted
 def remove_csvs_with_non_numerical_data(path):
-    # list_of_files = os.listdir(reformat_csvs_path)
     removed_files = 0
     kept_files = 0
     list_of_files = os.listdir(path)
@@ -110,9 +108,8 @@ def remove_csvs_with_non_numerical_data(path):
         logger.info(f"remove_csvs_with_non_numerical_data: Reading file--> {file}")
         try:
             df = pd.read_csv(f"{path}/{file}", header=None)
-            # print(df)
+            # Conversion to float
             array_2d = df.to_numpy()
-            # print(array_2d)
             array_2d.astype(float)
             logger.info(f"remove_csvs_with_non_numerical_data: File--> {file} only contains numbers, will not be deleted")
             kept_files += 1

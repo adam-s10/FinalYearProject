@@ -1,11 +1,18 @@
 import logging
 import sys
 import os
-import time
+import shutil
+from kaggle.api.kaggle_api_extended import KaggleApi
 
 import pandas as pd
 from sklearn.metrics import accuracy_score
+from sklearn.model_selection import StratifiedKFold, train_test_split
 from sklearn import tree
+from sklearn import svm
+from sklearn.neural_network import MLPClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.naive_bayes import GaussianNB
 
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
@@ -15,135 +22,258 @@ formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(messag
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
-path_to_csvs = "D:/PycharmProjects/FinalYearProject/csvDatasets"
+api = KaggleApi()
+api.authenticate()
 
-# an array where the accuracy will be grouped in batches of 10% i.e. index 0 = 0 ≤ x ≤ 10, index 1 = 10 <  x ≤ 20, etc
-accuracy_array = [0] * 10
-strs = [""] * 10
+path_to_csvs = "D:/PycharmProjects/FinalYearProject/csvDatasets"
 csv_files = os.listdir(path_to_csvs)
-print(accuracy_array)
-print(strs)
 failed_files = []
 
-for file in csv_files:
-    logger.info(f"File to be classified --> {file}")
-    data = pd.read_csv(f"{path_to_csvs}/{file}", header=None)
+# Total number of files: 40599
+# 3.74% or 1519 files are above 1MB
+# 3.3% or 1373 files are above 2MB
+# 2.6% or  1067 files are above 3MB
+# 2.0% or 832 files are above 4MB
+# Current iteration we are losing 3.3% of files
 
-    # Get number of columns then remove 1 to fit array format for later processing
-    x = len(data.columns)
-    if x <= 2:
+
+# Writes accuracy score of a given file name. Will return -1, -2, -3 for a variety of errors
+def write_results_to_txt(file_name, value):
+    f = open("D:/PycharmProjects/FinalYearProject/MetaDataFiles/results_ignoring_above_4MB.txt", "a")
+    f.write(f"{file_name},{value}\n")
+    f.close()
+
+
+def verify_data_classifies():
+    for file in csv_files:
+        logger.info(f"File to be classified --> {file}")
+        data = pd.read_csv(f"{path_to_csvs}/{file}", header=None)
+
+        # Get number of columns then remove 1 to fit array format for later processing
+        # Return -1 if file has too few columns
+        x = len(data.columns)
+        if x <= 2:
+            logger.warning(f"File has too few columns, skipping file --> {file}")
+            failed_files.append(file)
+            write_results_to_txt(file, -1)
+            continue
+
+        # If greater than xMB return -2
+        z = os.path.getsize(f"{path_to_csvs}/{file}")
+        logger.info(f"Size of file --> {z}")
+        z = z / 1000000
+        logger.info(f"Size of file in MB --> {z}")
+        if z > 4:
+            logger.warning(f"File is too big, skipping file --> {file}")
+            failed_files.append(file)
+            write_results_to_txt(file, -2)
+            continue
+        x -= 1
+
+        # All columns except the last one
+        a = data.drop(data.columns[len(data.columns) - 1], axis=1)
+        # Only the last column
+        b = data.drop(data.iloc[:, 0:x], axis=1)
+
+        # Run classifier after data processing
+        classifier = tree.DecisionTreeClassifier(criterion='gini')
+        try:
+            # If all cases pass and file classifies write accuracy to txt file
+            classifier.fit(a, b)
+            # Evaluate model on testing data
+            y_pred = classifier.predict(a)
+            acc = accuracy_score(y_pred, b)
+            logger.info(f"Accuracy score for file {file} returned --> {acc}")
+            write_results_to_txt(file, acc)
+        except:
+            # If classifier fails return -3
+            logger.warning(f"Something went wrong with file --> {file}")
+            failed_files.append(file)
+            write_results_to_txt(file, -3)
+
+
+def move_invalid_datasets():
+    for file in csv_files:
+        logger.info(f"File to be classified --> {file}")
+        data = pd.read_csv(f"{path_to_csvs}/{file}", header=None)
+
+        # Get number of columns then remove 1 to fit array format for later processing
+        # Return -1 if file has too few columns
+        x = len(data.columns)
+        if x <= 2:
+            logger.warning(f"File has too few columns, skipping file --> {file}")
+            failed_files.append(file)
+            # write_results_to_txt(file, -1)
+            shutil.move(f"{path_to_csvs}/{file}", f"D:/PycharmProjects/FinalYearProject/invalidDatasets/{file}")
+            continue
+
+        # If greater than xMB return -2
+        z = os.path.getsize(f"{path_to_csvs}/{file}")
+        logger.info(f"Size of file --> {z}")
+        z = z / 1000000
+        logger.info(f"Size of file in MB --> {z}")
+        if z > 2:
+            logger.warning(f"File is too big, skipping file --> {file}")
+            failed_files.append(file)
+            # write_results_to_txt(file, -2)
+            shutil.move(f"{path_to_csvs}/{file}", f"D:/PycharmProjects/FinalYearProject/invalidDatasets/{file}")
+            continue
+        x -= 1
+
+        # All columns except the last one
+        a = data.drop(data.columns[len(data.columns) - 1], axis=1)
+        # Only the last column
+        b = data.drop(data.iloc[:, 0:x], axis=1)
+
+        # Run classifier after data processing
+        classifier = tree.DecisionTreeClassifier(criterion='gini')
+        try:
+            # If all cases pass and file classifies do nothing
+            classifier.fit(a, b)
+            # Evaluate model on testing data
+            y_pred = classifier.predict(a)
+            acc = accuracy_score(y_pred, b)
+            logger.info(f"Accuracy score for file {file} returned --> {acc}")
+        except:
+            # If classifier fails move to new directory
+            logger.warning(f"Something went wrong with file --> {file}")
+            failed_files.append(file)
+            # write_results_to_txt(file, -3)
+            shutil.move(f"{path_to_csvs}/{file}", f"D:/PycharmProjects/FinalYearProject/invalidDatasets/{file}")
+
+
+def get_tags_for_csvs():
+    for file in csv_files:
+        x = file[8:]
+        logger.info(f"CSV file to find tags --> {x}")
+
+        datasets = api.dataset_list(search=x, file_type="csv", page=1)
+        for i in range(0, len(datasets)):
+            d = datasets[i]
+            if len(d.tags) == 0:
+                f = open("D:/PycharmProjects/FinalYearProject/MetaDataFiles/tags_list2.txt", "a")
+                f.write(f"{x},{d.ref},none\n")
+                f.close()
+            else:
+                for t in d.tags:
+                    logger.info(f"{x}, {str(d.ref)}, {str(t)}")
+                    f = open("D:/PycharmProjects/FinalYearProject/MetaDataFiles/tags_list2.txt", "a")
+                    f.write(f"{x},{d.ref},{t}\n")
+                    f.close()
+
+
+def run_all_classifiers():
+    for file in csv_files:
+        logger.info(f"File to be classified --> {file}")
+
+        # Preprocess the data
+        data = pd.read_csv(f"{path_to_csvs}/{file}", header=None)
+        x = len(data.columns)
+        x -= 1
+
+        # Prepare data
+        # All columns except the last one
+        a = data.drop(data.columns[len(data.columns) - 1], axis=1)
+        # Only the last column
+        b = data.drop(data.iloc[:, 0:x], axis=1)
+        #Filtering
+        s = set(b)
+        print(s)
+        if len(s) == 1:
+            logger.warning(f"{file} only contains 1 variable in target column, skipping")
+            write_accuracy_score(file, "N/A", -2)
+            continue
+        if data.shape[0] < 100:
+            logger.warning(f"{file} has too few rows, skipping")
+            write_accuracy_score(file, "N/A", -3)
+            continue
+
+        # Classify for Support Vector Machine
+        svm_classifier = svm.SVC(kernel="linear")
+        cross_validation(svm_classifier, a, b, "SVM", file)
+
+        # Classify for neural network
+        nn_classifier = MLPClassifier()
+        cross_validation(nn_classifier, a, b, "NN", file)
+
+        # Classify for random forrest
+        rf_classifier = RandomForestClassifier()
+        cross_validation(rf_classifier, a, b, "RF", file)
+
+        # Classify for Logistic Regression
+        lr_classifier = LogisticRegression()
+        cross_validation(lr_classifier, a, b, "LR", file)
+
+        # Classify for Naive Bayes
+        nb_classifier = GaussianNB()
+        cross_validation(nb_classifier, a, b, "NB", file)
+
+
+def cross_validation(classifier, a, b, classifier_name, file):
+    # Train classifier
+    # TODO: Change to cross validation - done
+    # try:
+    #     x_train, x_test, y_train, y_test = train_test_split(a, b, test_size=.25, random_state=0)
+    #     classifier.fit(x_train, y_train)
+    #     y_pred = classifier.predict(x_test)
+    #     acc = accuracy_score(y_pred, y_test)
+    #     write_accuracy_score(file, classifier_name, acc)
+    # except:
+    #     logger.warning("An error occurred")
+    #     write_accuracy_score(file, classifier_name, -1)
+    acc = []
+    try:
+        skf = StratifiedKFold(n_splits=10)
+        skf.get_n_splits(a, b)
+        for train_index, test_index in skf.split(a, b):
+            train_d = a[train_index]
+            train_c = [b[j] for j in train_index]
+            test_d = a[test_index]
+            test_c = [b[j] for j in test_index]
+            classifier.fit(train_d, train_c)
+
+            # Evaluate model on testing data
+            y_pred = classifier.predict(test_d)
+            acc = accuracy_score(y_pred, test_c)
+        write_accuracy_score(file, classifier_name, acc)
+    except:
+        logger.info("An error occurred")
+        write_accuracy_score(file, classifier_name, -1)
+        # Evaluate classifier
+        # acc = accuracy_score(y_test, y_pred)
+        # logger.info(f"SVM accuracy for {file} --> {acc}")
+
+
+def write_accuracy_score(file, classifier_name, acc):
+    f = open("D:/PycharmProjects/FinalYearProject/MetaDataFiles/classification_results3.txt", "a")
+    a = str(acc)
+    a = a.replace("[", "")
+    a = a.replace("]", "")
+    f.write(f"{file},{classifier_name},{a}\n")
+    f.close()
+
+
+def filter_csvs(csv_length, file):
+    if csv_length <= 2:
         logger.warning(f"File has too few columns, skipping file --> {file}")
         failed_files.append(file)
-        continue
+        # write_results_to_txt(file, -1)
+        return -1
 
-    # If greater than 2MB
-    if os.path.getsize(f"{path_to_csvs}/{file}") > 209715200:
+    # If greater than xMB return -2
+    z = os.path.getsize(f"{path_to_csvs}/{file}")
+    logger.info(f"Size of file --> {z}")
+    z = z / 1000000
+    logger.info(f"Size of file in MB --> {z}")
+    if z > 4:
         logger.warning(f"File is too big, skipping file --> {file}")
-        continue
-    x -= 1
-
-    # All columns except the last one
-    a = data.drop(data.columns[len(data.columns) - 1], axis=1)
-    # Only the last column
-    b = data.drop(data.iloc[:, 0:x], axis=1)
-
-    # Run classifier after data processing
-    classifier = tree.DecisionTreeClassifier(criterion='gini')
-    try:
-        classifier.fit(a, b)
-        # Evaluate model on testing data
-        y_pred = classifier.predict(a)
-        acc = accuracy_score(y_pred, b)
-        logger.info(f"Accuracy score for file {file} returned --> {acc}")
-    except:
-        logger.warning(f"Something went wrong with file --> {file}")
         failed_files.append(file)
-
-    # Collect Statistics on classified data
-    if acc <= .10:
-        temp = accuracy_array[0]
-        temp += 1
-        accuracy_array.insert(0, temp)
-        stemp = strs[0]
-        stemp = stemp + f" {file}"
-        strs.insert(0, stemp)
-    elif .10 < acc <= .20:
-        temp = accuracy_array[1]
-        temp += 1
-        accuracy_array.insert(1, temp)
-        stemp = strs[1]
-        stemp = stemp + f" {file}"
-        strs.insert(1, stemp)
-    elif .20 < acc <= .30:
-        temp = accuracy_array[2]
-        temp += 1
-        accuracy_array.insert(2, temp)
-        stemp = strs[2]
-        stemp = stemp + f" {file}"
-        strs.insert(2, stemp)
-    elif .30 < acc <= .40:
-        temp = accuracy_array[3]
-        temp += 1
-        accuracy_array.insert(3, temp)
-        stemp = strs[3]
-        stemp = stemp + f" {file}"
-        strs.insert(3, stemp)
-    elif .40 < acc <= .50:
-        temp = accuracy_array[4]
-        temp += 1
-        accuracy_array.insert(4, temp)
-        stemp = strs[4]
-        stemp = stemp + f" {file}"
-        strs.insert(4, stemp)
-    elif .50 < acc <= .60:
-        temp = accuracy_array[5]
-        temp += 1
-        accuracy_array.insert(5, temp)
-        stemp = strs[5]
-        stemp = stemp + f" {file}"
-        strs.insert(5, stemp)
-    elif .60 < acc <= .70:
-        temp = accuracy_array[6]
-        temp += 1
-        accuracy_array.insert(6, temp)
-        stemp = strs[6]
-        stemp = stemp + f" {file}"
-        strs.insert(6, stemp)
-    elif .70 < acc <= .80:
-        temp = accuracy_array[7]
-        temp += 1
-        accuracy_array.insert(7, temp)
-        stemp = strs[7]
-        stemp = stemp + f" {file}"
-        strs.insert(7, stemp)
-    elif .80 < acc <= .90:
-        temp = accuracy_array[8]
-        temp += 1
-        accuracy_array.insert(8, temp)
-        stemp = strs[8]
-        stemp = stemp + f" {file}"
-        strs.insert(8, stemp)
+        # write_results_to_txt(file, -2)
+        return -2
     else:
-        temp = accuracy_array[9]
-        temp += 1
-        accuracy_array.insert(9, temp)
-        stemp = strs[9]
-        stemp = stemp + f" {file}"
-        strs.insert(9, stemp)
+        return 1
 
-print("Accuracy score distribution:")
-print(accuracy_array)
-print("Corresponding files which scored in bands of 10%:")
-print(strs)
-print("Files which failed to classify:")
-print(failed_files)
-print(f"Number of failed files --> {len(failed_files)}")
-# min_score = 0
-# max_score = .1
-# for i in accuracy_array:
-#     logger.info(f"These files had a score of between {min_score} and {max_score}")
-#     print(strs[i])
-#     logger.info(f"These are their scores in order:")
-#     print(accuracy_array[i])
-#     min_score += .1
-#     max_score += .1
+
+# get_tags_for_csvs()
+# move_invalid_datasets()
+run_all_classifiers()
