@@ -1,5 +1,6 @@
-import zipfile
-from pathlib import Path
+import os
+import statistics
+
 from kaggle.api.kaggle_api_extended import KaggleApi
 import logging
 import sys
@@ -20,6 +21,8 @@ logger.addHandler(handler)
 
 download_path_zips = "D:/PycharmProjects/FinalYearProject/zips/"
 extraction_path_datasets = "D:/PycharmProjects/FinalYearProject/extractedZips"
+path_to_csvs = "D:/PycharmProjects/FinalYearProject/csvDatasets"
+csv_files = os.listdir(path_to_csvs)
 
 
 # Gathers the information needed to interact with api.download_datasets_cli
@@ -28,17 +31,18 @@ def __list_dataset_names():
     full_dataset_list = []
     data_still_available = True
     count = 1
-    while data_still_available:
+    while data_still_available:  # while kaggle keeps returning datasets
+        # call to kaggle to return all datasets with tag classification and file type csv
         datasets = api.dataset_list(page=count, tag_ids="classification", file_type="csv")
         if len(datasets) != 0:
-        # if count < 2: # Used only to test
-            full_dataset_list += datasets
-            count += 1
+            full_dataset_list += datasets  # append file location to list
+            count += 1  # move get next page of datasets
         else:
             data_still_available = False
+    # log lines providing info related to method's run
     logger.info(f"list_dataset_names: Number of pages visited --> {count}")
     logger.info(f"list_dataset_names: Number of extractedZips scraped --> {len(full_dataset_list)}")
-    print(f"/n Complete Data Set: {full_dataset_list}")
+    print(f"\n Complete Data Set: {full_dataset_list}")
     return full_dataset_list
 
 
@@ -46,13 +50,61 @@ def __list_dataset_names():
 def __download_datasets(dataset_list_as_strings):
     logger.info("download_datasets: Download Starting!")
     for word in dataset_list_as_strings:
-        path = f"{download_path_zips}{word.split('/')[1]}"
+        path = f"{download_path_zips}{word.split('/')[1]}"  # creates a new directory based off file name downloaded
         try:
-            api.dataset_download_cli(dataset=word, path=path)
+            api.dataset_download_cli(dataset=word, path=path)  # download client for kaggle api
         except:
             logger.info(f"This data set could not be scraped --> {download_path_zips}{word.split('/')[1]}")
     logger.info("download_datasets: Download Complete!")
 
 
-list_of_datasets = [str(x) for x in __list_dataset_names()]
-__download_datasets(list_of_datasets)
+# Get the tags related to a dataset using kaggle api
+def get_tags_for_csvs():
+    for file in csv_files:
+        x = file[8:]  # use indexing to remove the updated_ from the name of the file returned by os listdir
+        logger.info(f"CSV file to find tags --> {x}")
+
+        datasets = api.dataset_list(search=x, file_type="csv", page=1)  # calls kaggle api for info on dataset
+        if len(datasets) == 0:
+            logger.info(f"No results found for --> {x}")
+        for i in range(0, len(datasets)):  # for each result
+            d = datasets[i]
+            if len(d.tags) == 0:  # if no tags found write none in file
+                f = open("D:/PycharmProjects/FinalYearProject/MetaDataFiles/missing_tags_list.txt", "a")
+                f.write(f"{x},{d.ref},none\n")
+                f.close()
+            else:
+                for t in d.tags:  # for each tag returned write file name, reference and the tag
+                    logger.info(f"{x}, {str(d.ref)}, {str(t)}")
+                    f = open("D:/PycharmProjects/FinalYearProject/MetaDataFiles/missing_tags_list.txt", "a")
+                    f.write(f"{x},{d.ref},{t}\n")
+                    f.close()
+
+
+# Finds the model tag related to a dataset name to estimate the dataset tag
+# Prints results on a new line to be copied into excel
+def find_modal_tag():
+    # open metadata file in read more
+    metadata_file = open("D:/PycharmProjects/FinalYearProject/MetaDataFiles/metadata_file.csv", "r")
+    for meta_line in metadata_file:  # for each line in metadata file
+        meta_line = meta_line.split(",")  # split the features
+        x = meta_line[0][8:]  # get dataset name and remove updated_
+        arr = []  # empty list to hold the tags
+
+        # open tags file in read mode
+        tags_file = open("D:/PycharmProjects/FinalYearProject/MetaDataFiles/tags_list_final.csv", "r")
+        for tags_line in tags_file:  # for each line in tag file
+            if x in tags_line:  # if dataset name is in tags file
+                y = tags_line.split(",")[4]  # get each tag
+                arr.append(y)  # add each tag for the file to list
+        tags_file.close()
+        if len(arr) != 0:  # if the filename from metadata file exists in tags file
+            print(statistics.mode(arr))  # calculate the modal tag
+        else:
+            print(0)  # assume tag = 0 if nothing found
+
+
+# list_of_datasets = [str(x) for x in __list_dataset_names()]
+# __download_datasets(list_of_datasets)
+
+get_tags_for_csvs()

@@ -22,22 +22,30 @@ extraction_path_datasets = "D:/PycharmProjects/FinalYearProject/extractedZips/"
 reformat_csvs_path = "D:/PycharmProjects/FinalYearProject/csvDatasets"
 
 
-def csv_cleanup_service():
-    logger.info("csv_cleanup_service: Beginning Cleanup...")
-    get_list_of_csvs()
-
-
-# Finds CSV's in a given path and adds them to blacklist
-# Then sends blacklist to move_csvs
+# Gets all csvs in a given path and adds them to a list
+# Then sends that list to move_csvs, so they are moved to a new directory
 def get_list_of_csvs(extracted_path):
-    blacklist = []
-    for root, dirs, files in os.walk(extracted_path):
-        for f in files:
+    blacklist = []  # empty list to be filled with absolute path of all files that are csvs
+    for root, dirs, files in os.walk(extracted_path):  # for everything in given directory
+        for f in files:  # for file in all files found by os.walk
             print(f"{f} is being evaluated")
-            if f.endswith(".csv"):
-                blacklist.append(os.path.join(root, f))
+            if f.endswith(".csv"):  # if file has extension .csv
+                blacklist.append(os.path.join(root, f))  # add path to list
                 logger.info(f"__get_list_of_csvs: Added file to blacklist --> {f}")
-    move_csvs(blacklist)
+    move_csvs(blacklist)  # send list to method that will move the csvs
+
+
+# @Deprecated
+# Gets all csvs in a given path and adds them to a list
+# Then sends that list to move_csvs, so they are moved to a new directory
+def get_list_of_csvs_x(extracted_path):
+    blacklist = []  # empty list to be filled with absolute path of all files that are csvs
+    for file in os.listdir(extracted_path):  # for each file in given directory
+        print(f"{file} is being evaluated")
+        if file.endswith(".csv"):  # if file has extension .csv
+            blacklist.append(f"{extracted_path}/{file}")  # add path to list
+            logger.info(f"get_list_of_csvs: Added file to blacklist --> {file}")
+    move_csvs(blacklist)  # send list to method that will move the csvs
 
 
 # Takes blacklist as the input containing a list of paths to csv files
@@ -64,30 +72,30 @@ def delete_unused_files(path):
         logger.info(f"Deletion path--> {path} failed")
 
 
-# Removes the top line from the CSV's
+# Removes the top line from the csvs saving them as a new file. Then removes the original csvs
 def reformat_csvs(path):
-    list_of_files = os.listdir(path)
-    removed_files = 0
-    for file in list_of_files:
+    list_of_files = os.listdir(path)  # get all the csvs in the given path
+    removed_files = 0  # count of failures
+    for file in list_of_files:  # for each file in directory
         logger.info(f"reformat_csvs: dropping first row for file --> {file}")
         try:
-            with open(f"{path}/{file}", 'r') as f:
-                with open(f"{path}/updated_{file}", 'w') as f1:
+            with open(f"{path}/{file}", 'r') as f:  # open the file in read mode
+                with open(f"{path}/updated_{file}", 'w') as f1:  # open new file in format updated_ file name
                     next(f)  # skip header line
-                    for line in f:
-                        f1.write(line)
+                    for line in f:  # for each line in original file
+                        f1.write(line)  # write rest of the lines to new file
         except:
             logger.info(f"reformat_csvs: dropping first row failed for file --> {file}")
-            os.remove(f"{path}/{file}")
-            removed_files += 1
+            os.remove(f"{path}/{file}")  # delete any file that fails
+            removed_files += 1  # keep count of failed files
 
     logger.info(f"reformat_csvs: amount of removed files --> {removed_files}")
-    new_list_of_files = os.listdir(path)
-    for file in new_list_of_files:
-        if not file.startswith("updated_"):
+    new_list_of_files = os.listdir(path)  # get all files in the path, including the new ones
+    for file in new_list_of_files:  # for each file in directory
+        if not file.startswith("updated_"):  # if the file is not one with header removed
             logger.info(f"__reformat_csvs: removing file --> {file}")
-            os.remove(f"{path}/{file}")
-    remove_csvs_with_non_numerical_data(path)
+            os.remove(f"{path}/{file}")  # remove file
+    remove_csvs_with_non_numerical_data(path)  # start process to remove any datasets that are not purely numerical
 
 
 # Attempts to convert csv to a float. If this fails file will be deleted
@@ -113,32 +121,34 @@ def remove_csvs_with_non_numerical_data(path):
     logger.info(f"Non Numerical Data: Number of removed files --> {removed_files}")
 
 
+# Extracts zip files in the provided directory one by one
+# After a file is extracted, the csvs are identified using get_list_of_csvs
+# They are moved and any remaining files are deleted
 def extract_data(path_given):
-    extraction_failures = 0
+    extraction_failures = 0  # count of failures
     directories = os.listdir(path_given)
     for d in directories:
         print(d)
-        path = Path(f"{path_given}/{d}")
-        for i in path.glob("*.zip"):
+        path = Path(f"{path_given}/{d}")  # path of child directory where zip resides
+        for i in path.glob("*.zip"):  # for each file that is a zip
             logger.info(f"File to be extracted --> {i}")
-            extracted_to = f"{extraction_path_datasets}{d}"
+            extracted_to = f"{extraction_path_datasets}{d}"  # declare location for data to be extracted to
             try:
-                with zipfile.ZipFile(i, 'r') as Zip:
-                    Zip.extractall(extracted_to)
+                with zipfile.ZipFile(i, 'r') as Zip:  # unzip
+                    Zip.extractall(extracted_to)  # extracted data to new location
                 logger.info(f"File successfully extracted --> {i}")
             except:
-                logger.info(f"Failed to Extract data--> {d}")
+                logger.info(f"Failed to Extract data--> {d}")  # log and keep track of failures
                 extraction_failures += 1
 
+        # identifies and moves csvs, then removes the directory data was extracted to as it contains 0 csvs
         get_list_of_csvs(extraction_path_datasets)
-        delete_unused_files(f"{path_given}/{d}")
+        delete_unused_files(f"{path_given}/{d}")  # remove the child directory
     logger.info(f"Extraction Failures --> {extraction_failures}")
     reformat_csvs("D:/PycharmProjects/FinalYearProject/test/csvDatasets")
 
 
 # extract_data()
-test_csv_reformatting = "D:/PycharmProjects/FinalYearProject/test/csvDatasets"
-test_csv_reformatting_live_data = "C:/Users/Adam/FinalYearProject_TestData"
 # reformat_csvs(test_csv_reformatting)
 # extract_data(test_csv_reformatting_live_data)
 extract_data(download_path_zips)
