@@ -124,7 +124,9 @@ def move_invalid_datasets():
     logger.info(f"move_invalid_datasets: Number of files which failed to classify --> {fails_to_classify}")
 
 
-def run_all_classifiers():
+# Check all datasets run on the 5 classifiers
+# @Deprecated
+def verify_data_classifies_on_all_classifiers():
     error_count = 0
     for file in os.listdir(path_to_csvs):
         logger.info(f"File to be classified --> {file}")
@@ -246,7 +248,6 @@ def calculate_stats(acc):
 
 # Creates the meta-dataset to make predictions on what the best classifier would be for a given dataset
 def create_meta_dataset():
-    error_count = 0
     for file in os.listdir("D:/PycharmProjects/FinalYearProject/csvDatasets"):
         data, a, b = preprocess_data(path_to_csvs, file)
         rows = data.shape[0]  # Get rows using pandas
@@ -259,7 +260,6 @@ def create_meta_dataset():
         except ValueError:  # If fails; skip
             logger.error(f"{file} raised value error, skipping")
             shutil.move(f"{path_to_csvs}/{file}", f"D:/PycharmProjects/FinalYearProject/inconsistentFailures/{file}")
-            error_count += 1
             continue
         svm_sd, svm_mean, svm_max, svm_min = calculate_stats(svm_acc)
         logger.info(f"create_meta_dataset: SVM returned mean --> {svm_mean}")
@@ -358,52 +358,32 @@ def classify_metafile():
     f.close()
 
 
-# @Deprecated
-# runs all the classifiers returning their accuracy scores for 10-fold cross-validation
+# Runs all the classifiers returning their accuracy scores for 10-fold cross-validation
 def run_all_classifiers_x(file, a, b):
     logger.info(f"run_all_classifiers: Beginning for file --> {file}")
 
-    logger.info(f"run_all_classifiers: SVM Starting")
+    logger.info("run_all_classifiers: SVM Starting")
     svm_results = cross_validation(svm.SVC(), a, b, "SVM", file)
-    logger.info(f"run_all_classifiers: SVM Finished")
+    logger.info("run_all_classifiers: SVM Finished")
 
-    logger.info(f"run_all_classifiers: NN Starting")
+    logger.info("run_all_classifiers: NN Starting")
     nn_results = cross_validation(MLPClassifier(max_iter=500), a, b, "NN", file)
-    logger.info(f"run_all_classifiers: NN Finished")
+    logger.info("run_all_classifiers: NN Finished")
 
-    logger.info(f"run_all_classifiers: RF Starting")
+    logger.info("run_all_classifiers: RF Starting")
     rf_results = cross_validation(RandomForestClassifier(), a, b, "RF", file)
-    logger.info(f"run_all_classifiers: RF Finished")
+    logger.info("run_all_classifiers: RF Finished")
 
-    logger.info(f"run_all_classifiers: LR Starting")
+    logger.info("run_all_classifiers: LR Starting")
     lr_results = cross_validation(LogisticRegression(), a, b, "LR", file)
-    logger.info(f"run_all_classifiers: LR Finished")
+    logger.info("run_all_classifiers: LR Finished")
 
-    logger.info(f"run_all_classifiers: NB Starting")
+    logger.info("run_all_classifiers: NB Starting")
     nb_results = cross_validation(GaussianNB(), a, b, "NB", file)
-    logger.info(f"run_all_classifiers: NB Finished")
+    logger.info("run_all_classifiers: NB Finished")
 
     logger.info(f"run_all_classifiers: Finished for file --> {file}")
     return svm_results, nn_results, rf_results, lr_results, nb_results
-
-
-def find_modal_tag():
-    metadata_file = open("D:/PycharmProjects/FinalYearProject/MetaDataFiles/metadata_file.csv", "r")
-    for meta_line in metadata_file:
-        meta_line = meta_line.split(",")
-        x = meta_line[0][8:]  # get dataset name and remove updated_
-        arr = []
-
-        tags_file = open("D:/PycharmProjects/FinalYearProject/MetaDataFiles/tags_list_final.csv", "r")
-        for tags_line in tags_file:
-            if x in tags_line:
-                y = tags_line.split(",")[4]  # get each tag
-                arr.append(y)  # add each tag for the file to an array
-        tags_file.close()
-        if len(arr) != 0:  # if the filename from metadata file exists in tags file
-            print(statistics.mode(arr))
-        else:
-            print(0)
 
 
 # move_invalid_datasets()
