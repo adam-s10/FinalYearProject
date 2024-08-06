@@ -124,9 +124,9 @@ def move_invalid_datasets():
     logger.info(f"move_invalid_datasets: Number of files which failed to classify --> {fails_to_classify}")
 
 
-# Check all datasets run on the 5 classifiers
-# @Deprecated
-def verify_data_classifies_on_all_classifiers():
+# Runs all datasets in provided directory to ensure they will work for generating meta-dataset.
+# Writes the results to a file to check for anomalies, such as NAN
+def run_all_classifiers():
     error_count = 0
     for file in os.listdir(path_to_csvs):
         logger.info(f"File to be classified --> {file}")
@@ -207,8 +207,8 @@ def cross_validation(classifier, data, classes, classifier_name, file):
     acc = []  # create list to store accuracies
     skf = StratifiedKFold(n_splits=10, shuffle=True)  # 10-fold split with data shuffle
     skf.get_n_splits(data, classes)  # get the splits using skf
-    for train_index, test_index in skf.split(data, classes):  # split the data and cross-validate 10 times
-        # getting train and test data
+    for train_index, test_index in skf.split(data, classes):  # split the data
+        # get train and test data
         train_d = data[train_index]
         train_c = [classes[j] for j in train_index]
         test_d = data[test_index]
@@ -230,8 +230,8 @@ def preprocess_data(path, file):
     logger.info(f"preprocess_data: Starting for file --> {file}")
     data = pd.read_csv(f"{path}/{file}", header=None)  # Read data using pandas
     data = data.dropna()  # Remove rows with NA values
-    # Split data into classes and targets
-    a = data.iloc[:, :-1]  # All columns except the last one, classes
+    # Split data into features and targets
+    a = data.iloc[:, :-1]  # All columns except the last one, features
     b = data.iloc[:, -1:]  # Only the last column, targets
     logger.info(f"preprocess_data: Finished for file --> {file}")
     return data, a, b
@@ -248,6 +248,7 @@ def calculate_stats(acc):
 
 # Creates the meta-dataset to make predictions on what the best classifier would be for a given dataset
 def create_meta_dataset():
+    error_count = 0
     for file in os.listdir("D:/PycharmProjects/FinalYearProject/csvDatasets"):
         data, a, b = preprocess_data(path_to_csvs, file)
         rows = data.shape[0]  # Get rows using pandas
@@ -260,6 +261,7 @@ def create_meta_dataset():
         except ValueError:  # If fails; skip
             logger.error(f"{file} raised value error, skipping")
             shutil.move(f"{path_to_csvs}/{file}", f"D:/PycharmProjects/FinalYearProject/inconsistentFailures/{file}")
+            error_count += 1
             continue
         svm_sd, svm_mean, svm_max, svm_min = calculate_stats(svm_acc)
         logger.info(f"create_meta_dataset: SVM returned mean --> {svm_mean}")
@@ -335,7 +337,7 @@ def classify_metafile():
     f = open("D:/PycharmProjects/FinalYearProject/MetaDataFiles/results_of_meta_file.txt", "a")
     data, a, b = preprocess_data(path_to_meta, file)
 
-    svm_results, nn_results, rf_results, lr_results, nb_results = run_all_classifiers_x(file, a, b)
+    svm_results, nn_results, rf_results, lr_results, nb_results = classify_dataset(file, a, b)
     svm_sd, svm_mean, svm_max, svm_min = calculate_stats(svm_results)
     f.write(f"SVM Cross-validation: {svm_results}\n")
     f.write(f"Min: {svm_min}, Max: {svm_max}, Standard Deviation: {svm_sd}, Mean: {svm_mean}\n")
@@ -358,29 +360,29 @@ def classify_metafile():
     f.close()
 
 
-# Runs all the classifiers returning their accuracy scores for 10-fold cross-validation
-def run_all_classifiers_x(file, a, b):
+# runs all the classifiers returning their accuracy scores for 10-fold cross-validation
+def classify_dataset(file, a, b):
     logger.info(f"run_all_classifiers: Beginning for file --> {file}")
 
-    logger.info("run_all_classifiers: SVM Starting")
+    logger.info(f"run_all_classifiers: SVM Starting")
     svm_results = cross_validation(svm.SVC(), a, b, "SVM", file)
-    logger.info("run_all_classifiers: SVM Finished")
+    logger.info(f"run_all_classifiers: SVM Finished")
 
-    logger.info("run_all_classifiers: NN Starting")
+    logger.info(f"run_all_classifiers: NN Starting")
     nn_results = cross_validation(MLPClassifier(max_iter=500), a, b, "NN", file)
-    logger.info("run_all_classifiers: NN Finished")
+    logger.info(f"run_all_classifiers: NN Finished")
 
-    logger.info("run_all_classifiers: RF Starting")
+    logger.info(f"run_all_classifiers: RF Starting")
     rf_results = cross_validation(RandomForestClassifier(), a, b, "RF", file)
-    logger.info("run_all_classifiers: RF Finished")
+    logger.info(f"run_all_classifiers: RF Finished")
 
-    logger.info("run_all_classifiers: LR Starting")
+    logger.info(f"run_all_classifiers: LR Starting")
     lr_results = cross_validation(LogisticRegression(), a, b, "LR", file)
-    logger.info("run_all_classifiers: LR Finished")
+    logger.info(f"run_all_classifiers: LR Finished")
 
-    logger.info("run_all_classifiers: NB Starting")
+    logger.info(f"run_all_classifiers: NB Starting")
     nb_results = cross_validation(GaussianNB(), a, b, "NB", file)
-    logger.info("run_all_classifiers: NB Finished")
+    logger.info(f"run_all_classifiers: NB Finished")
 
     logger.info(f"run_all_classifiers: Finished for file --> {file}")
     return svm_results, nn_results, rf_results, lr_results, nb_results
