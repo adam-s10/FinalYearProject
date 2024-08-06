@@ -205,8 +205,8 @@ def cross_validation(classifier, data, classes, classifier_name, file):
     acc = []  # create list to store accuracies
     skf = StratifiedKFold(n_splits=10, shuffle=True)  # 10-fold split with data shuffle
     skf.get_n_splits(data, classes)  # get the splits using skf
-    for train_index, test_index in skf.split(data, classes):  # split the data and cross-validate 10 times
-        # getting train and test data
+    for train_index, test_index in skf.split(data, classes):  # split the data
+        # get train and test data
         train_d = data[train_index]
         train_c = [classes[j] for j in train_index]
         test_d = data[test_index]
@@ -228,8 +228,8 @@ def preprocess_data(path, file):
     logger.info(f"preprocess_data: Starting for file --> {file}")
     data = pd.read_csv(f"{path}/{file}", header=None)  # Read data using pandas
     data = data.dropna()  # Remove rows with NA values
-    # Split data into classes and targets
-    a = data.iloc[:, :-1]  # All columns except the last one, classes
+    # Split data into features and targets
+    a = data.iloc[:, :-1]  # All columns except the last one, features
     b = data.iloc[:, -1:]  # Only the last column, targets
     logger.info(f"preprocess_data: Finished for file --> {file}")
     return data, a, b

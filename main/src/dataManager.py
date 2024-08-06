@@ -135,7 +135,7 @@ def extract_data(path_given):
             extracted_to = f"{extraction_path_datasets}{d}"  # declare location for data to be extracted to
             try:
                 with zipfile.ZipFile(i, 'r') as Zip:  # unzip
-                    Zip.extractall(extracted_to)  # extracted data to new location
+                    Zip.extractall(extracted_to)  # extract data to new location
                 logger.info(f"File successfully extracted --> {i}")
             except:
                 logger.info(f"Failed to Extract data--> {d}")  # log and keep track of failures

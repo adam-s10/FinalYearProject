@@ -1,5 +1,8 @@
 import os
 import statistics
+import zipfile
+from pathlib import Path
+import deprecation
 
 from kaggle.api.kaggle_api_extended import KaggleApi
 import logging
@@ -26,28 +29,28 @@ csv_files = os.listdir(path_to_csvs)
 
 
 # Gathers the information needed to interact with api.download_datasets_cli
-# Hits Kaggle API until no more datasets are returned for the given page - count
-def __list_dataset_names():
+# Hits Kaggle API until no more datasets are returned for the given page
+def list_dataset_names():
     full_dataset_list = []
     data_still_available = True
-    count = 1
+    page_number = 1
     while data_still_available:  # while kaggle keeps returning datasets
         # call to kaggle to return all datasets with tag classification and file type csv
-        datasets = api.dataset_list(page=count, tag_ids="classification", file_type="csv")
+        datasets = api.dataset_list(page=page_number, tag_ids="classification", file_type="csv")
         if len(datasets) != 0:
             full_dataset_list += datasets  # append file location to list
-            count += 1  # move get next page of datasets
+            page_number += 1  # add 1 to get next page of datasets
         else:
             data_still_available = False
     # log lines providing info related to method's run
-    logger.info(f"list_dataset_names: Number of pages visited --> {count}")
+    logger.info(f"list_dataset_names: Number of pages visited --> {page_number}")
     logger.info(f"list_dataset_names: Number of extractedZips scraped --> {len(full_dataset_list)}")
     print(f"\n Complete Data Set: {full_dataset_list}")
     return full_dataset_list
 
 
-# Uses list generate from __list_dataset_names to download the identified datasets to a given location
-def __download_datasets(dataset_list_as_strings):
+# Uses list generated from list_dataset_names to download the identified datasets to a given location
+def download_datasets(dataset_list_as_strings):
     logger.info("download_datasets: Download Starting!")
     for word in dataset_list_as_strings:
         path = f"{download_path_zips}{word.split('/')[1]}"  # creates a new directory based off file name downloaded
@@ -56,6 +59,24 @@ def __download_datasets(dataset_list_as_strings):
         except:
             logger.info(f"This data set could not be scraped --> {download_path_zips}{word.split('/')[1]}")
     logger.info("download_datasets: Download Complete!")
+
+
+# Method to extract all zip files downloaded from kaggle api
+@deprecation.deprecated(deprecated_in="Sprint 2",
+                        details="Dangerous when handling large amount of files to be unzipped (potential Zip Bomb). "
+                                "Use extract_data in dataManager.py instead.")
+def extract_data(directory):
+    extracted_locations = []
+    for word in directory:  # for each directory in the parent directory
+        file_name = word.split('/')[1]  # separate to get file name
+        zipfile_location = f"{download_path_zips}{file_name}"
+        extracted_to = f"{extraction_path_datasets}{file_name}"  # new directory for data to be extracted to
+        path = Path(zipfile_location)
+        for i in path.glob("*.zip"):  # for each file that is a zip
+            with zipfile.ZipFile(i, mode="r") as Zip:
+                Zip.extractall(extracted_to)  # extract the file to the provided location
+        extracted_locations.append(file_name)
+    print(extracted_locations)  # print successful extractions
 
 
 # Get the tags related to a dataset using kaggle api
