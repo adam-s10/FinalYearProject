@@ -124,6 +124,8 @@ def move_invalid_datasets():
     logger.info(f"move_invalid_datasets: Number of files which failed to classify --> {fails_to_classify}")
 
 
+# Runs all datasets in provided directory to ensure they will work for generating meta-dataset.
+# Writes the results to a file to check for anomalies, such as NAN
 def run_all_classifiers():
     error_count = 0
     for file in os.listdir(path_to_csvs):
@@ -335,7 +337,7 @@ def classify_metafile():
     f = open("D:/PycharmProjects/FinalYearProject/MetaDataFiles/results_of_meta_file.txt", "a")
     data, a, b = preprocess_data(path_to_meta, file)
 
-    svm_results, nn_results, rf_results, lr_results, nb_results = run_all_classifiers_x(file, a, b)
+    svm_results, nn_results, rf_results, lr_results, nb_results = classify_dataset(file, a, b)
     svm_sd, svm_mean, svm_max, svm_min = calculate_stats(svm_results)
     f.write(f"SVM Cross-validation: {svm_results}\n")
     f.write(f"Min: {svm_min}, Max: {svm_max}, Standard Deviation: {svm_sd}, Mean: {svm_mean}\n")
@@ -358,9 +360,8 @@ def classify_metafile():
     f.close()
 
 
-# @Deprecated
 # runs all the classifiers returning their accuracy scores for 10-fold cross-validation
-def run_all_classifiers_x(file, a, b):
+def classify_dataset(file, a, b):
     logger.info(f"run_all_classifiers: Beginning for file --> {file}")
 
     logger.info(f"run_all_classifiers: SVM Starting")
@@ -385,25 +386,6 @@ def run_all_classifiers_x(file, a, b):
 
     logger.info(f"run_all_classifiers: Finished for file --> {file}")
     return svm_results, nn_results, rf_results, lr_results, nb_results
-
-
-def find_modal_tag():
-    metadata_file = open("D:/PycharmProjects/FinalYearProject/MetaDataFiles/metadata_file.csv", "r")
-    for meta_line in metadata_file:
-        meta_line = meta_line.split(",")
-        x = meta_line[0][8:]  # get dataset name and remove updated_
-        arr = []
-
-        tags_file = open("D:/PycharmProjects/FinalYearProject/MetaDataFiles/tags_list_final.csv", "r")
-        for tags_line in tags_file:
-            if x in tags_line:
-                y = tags_line.split(",")[4]  # get each tag
-                arr.append(y)  # add each tag for the file to an array
-        tags_file.close()
-        if len(arr) != 0:  # if the filename from metadata file exists in tags file
-            print(statistics.mode(arr))
-        else:
-            print(0)
 
 
 # move_invalid_datasets()
