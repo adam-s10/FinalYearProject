@@ -4,7 +4,6 @@ import sys
 import os
 import shutil
 import pandas as pd
-import unittest
 
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import StratifiedKFold
