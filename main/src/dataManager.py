@@ -3,6 +3,8 @@ import logging
 import sys
 import time
 import shutil
+
+import deprecation
 import pandas as pd
 from pathlib import Path
 import zipfile
@@ -35,10 +37,12 @@ def get_list_of_csvs(extracted_path):
     move_csvs(blacklist)  # send list to method that will move the csvs
 
 
-# @Deprecated
 # Gets all csvs in a given path and adds them to a list
 # Then sends that list to move_csvs, so they are moved to a new directory
-def get_list_of_csvs_x(extracted_path):
+@deprecation.deprecated(deprecated_in="Sprint 2",
+                        details="Does not work as expected, cannot find files in children of provided directory."
+                                "Use get_list_of_csvs in dataManager.py instead")
+def get_list_of_csvs_old(extracted_path):
     blacklist = []  # empty list to be filled with absolute path of all files that are csvs
     for file in os.listdir(extracted_path):  # for each file in given directory
         print(f"{file} is being evaluated")
