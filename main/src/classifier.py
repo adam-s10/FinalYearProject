@@ -35,7 +35,7 @@ class FileManager:
         self.file_root = file_root
 
     def __enter__(self):
-        self.file = open(self.file_root + self.file_name + self.extension, self.mode)
+        self.file = open(self.file_root + '\\' + self.file_name + self.extension, self.mode)
         return self.file
 
     def __exit__(self, exc_type, exc_val, exc_tb):
