@@ -2,6 +2,7 @@ import logging
 import statistics
 import sys
 import os
+from os.path import dirname, abspath
 import shutil
 
 import pandas as pd
@@ -22,29 +23,55 @@ formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(messag
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
+
+# Class providing a context manager and benefits to file manipulation and generation for this project
+class FileManager:
+
+    # Assumes file is located or is to be generated in the same directory as python file; unless otherwise specified
+    def __init__(self, file_name, mode, extension='.txt', file_root=dirname(abspath(__file__))):
+        self.file_name = file_name
+        self.mode = mode
+        self.extension = extension
+        self.file_root = file_root
+
+    def __enter__(self):
+        self.file = open(self.file_root + self.file_name + self.extension, self.mode)
+        return self.file
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.file.close()
+        if exc_val is not None:
+            logger.error(f'FileManager for {self.file_name}: Encountered exception --> {exc_val}')
+            logger.error(f'FileManager for {self.file_name}: Exception type --> {exc_type}')
+            return True
+
+    def __str__(self):
+        return f'FileManager for {self.file_name}: \nWorking in mode --> {self.mode}\nWith root --> {self.file_root}'
+
+
 path_to_csvs = "D:/PycharmProjects/FinalYearProject/csvDatasets"
 csv_files = os.listdir(path_to_csvs)
 
 
 # writes accuracy scores to a text file
 def write_accuracy_score(file, classifier_name, scores_as_str, average):
-    f = open("D:/PycharmProjects/FinalYearProject/MetaDataFiles/classification_results (using Swift's method).txt", "a")
-    f.write(f"{file},{classifier_name},{scores_as_str},{average}\n")
-    f.close()
+    with FileManager('classification_results5.txt', 'a',
+                     file_root='D:/PycharmProjects/FinalYearProject/MetaDataFiles') as f:
+        f.write(f"{file},{classifier_name},{scores_as_str},{average}\n")
 
 
 # writes any failures that occur during execution to a text file
 def write_failed_files(file, error_code, error_message):
-    f = open("D:/PycharmProjects/FinalYearProject/MetaDataFiles/failed_files.txt", "a")
-    f.write(f"{file},{error_code},{error_message}\n")
-    f.close()
+    with FileManager('failed_files5.txt', 'a',
+                     file_root='D:/PycharmProjects/FinalYearProject/MetaDataFiles') as f:
+        f.write(f"{file},{error_code},{error_message}\n")
 
 
 # Writes to a file to be turned into the meta-dataset (csv)
 def write_meta_data(file, columns, rows, minimum, maximum, sd, mean, best_classifier):
-    f = open("D:/PycharmProjects/FinalYearProject/MetaDataFiles/metadata_file.csv", "a")
-    f.write(f"{file},{columns},{rows},{minimum},{maximum},{sd},{mean},{best_classifier}\n")
-    f.close()
+    with FileManager('metadata_file5.csv', 'a',
+                     file_root='D:/PycharmProjects/FinalYearProject/MetaDataFiles') as f:
+        f.write(f"{file},{columns},{rows},{minimum},{maximum},{sd},{mean},{best_classifier}\n")
 
 
 def move_invalid_datasets():
@@ -200,7 +227,6 @@ def run_all_classifiers():
 
 # Cross validation method
 def cross_validation(classifier, data, classes, classifier_name, file):
-
     logger.info(f"cross_validation: Classification for {file} using classifier {classifier_name} starting:")
     data = data.to_numpy()  # convert to numpy array
     classes = classes.values.tolist()  # convert to list
