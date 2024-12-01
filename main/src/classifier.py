@@ -55,21 +55,21 @@ csv_files = os.listdir(path_to_csvs)
 
 # writes accuracy scores to a text file
 def write_accuracy_score(file, classifier_name, scores_as_str, average):
-    with FileManager('classification_results5.txt', 'a',
+    with FileManager('classification_results.txt', 'a',
                      file_root='D:/PycharmProjects/FinalYearProject/MetaDataFiles') as f:
         f.write(f"{file},{classifier_name},{scores_as_str},{average}\n")
 
 
 # writes any failures that occur during execution to a text file
 def write_failed_files(file, error_code, error_message):
-    with FileManager('failed_files5.txt', 'a',
+    with FileManager('failed_files.txt', 'a',
                      file_root='D:/PycharmProjects/FinalYearProject/MetaDataFiles') as f:
         f.write(f"{file},{error_code},{error_message}\n")
 
 
 # Writes to a file to be turned into the meta-dataset (csv)
 def write_meta_data(file, columns, rows, minimum, maximum, sd, mean, best_classifier):
-    with FileManager('metadata_file5.csv', 'a',
+    with FileManager('metadata_file.csv', 'a',
                      file_root='D:/PycharmProjects/FinalYearProject/MetaDataFiles') as f:
         f.write(f"{file},{columns},{rows},{minimum},{maximum},{sd},{mean},{best_classifier}\n")
 
