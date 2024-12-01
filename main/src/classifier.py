@@ -45,7 +45,7 @@ class FileManager:
             logger.error(f'FileManager for {self.file_name}: Exception type --> {exc_type}')
             return True
 
-    def __str__(self):
+    def __repr__(self):
         return f'FileManager for {self.file_name}: \nWorking in mode --> {self.mode}\nWith root --> {self.file_root}'
 
 
