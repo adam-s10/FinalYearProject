@@ -4,14 +4,6 @@ import sys
 import unittest
 from classifier import FileManager
 
-logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
-handler = logging.StreamHandler(sys.stdout)
-handler.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-handler.setFormatter(formatter)
-logger.addHandler(handler)
-
 
 class TestFileManager(unittest.TestCase):
     @classmethod
@@ -26,7 +18,7 @@ class TestFileManager(unittest.TestCase):
     def test_string_representation(self):
         file = FileManager('test_string_representation', 'w')
         expected_result = ('FileManager for test_string_representation: \nWorking in mode --> w\nWith root --> '
-                           'D:\\PycharmProjects\\FinalYearProject\\main\\src\\')
+                           'D:\\PycharmProjects\\FinalYearProject\\main\\src')
 
         self.assertEqual(repr(file), expected_result,
                          'String representation of class was not returned as expected!')
@@ -63,6 +55,14 @@ class TestFileManager(unittest.TestCase):
         os.remove('D:/PycharmProjects/FinalYearProject/main/src/test_file_write.txt')
         logger.info('TestFileManager: tearDownClass finished, files deleted')
 
+
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)
+handler = logging.StreamHandler(sys.stdout)
+handler.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
 
 if __name__ == '__main__':
     unittest.main()

@@ -15,14 +15,6 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.naive_bayes import GaussianNB
 
-logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
-handler = logging.StreamHandler(sys.stdout)
-handler.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-handler.setFormatter(formatter)
-logger.addHandler(handler)
-
 
 # Class providing a context manager and benefits to file manipulation and generation for this project
 class FileManager:
@@ -48,6 +40,14 @@ class FileManager:
     def __repr__(self):
         return f'FileManager for {self.file_name}: \nWorking in mode --> {self.mode}\nWith root --> {self.file_root}'
 
+
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)
+handler = logging.StreamHandler(sys.stdout)
+handler.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
 
 path_to_csvs = "D:/PycharmProjects/FinalYearProject/csvDatasets"
 csv_files = os.listdir(path_to_csvs)
