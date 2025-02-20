@@ -41,6 +41,64 @@ class FileManager:
         return f'FileManager for {self.file_name}: \nWorking in mode --> {self.mode}\nWith root --> {self.file_root}'
 
 
+class Classifier:
+
+    def __init__(self, classifier, classifier_name):
+        if not isinstance(classifier_name, str):
+            raise ValueError('Variable classifier_name should be of type str')
+
+        self.classifier = classifier
+        self.classifier_name = classifier_name
+        self.accuracies = []
+
+    def cross_validation(self, data, classes, file, n_splits=10):
+        logger.info(f"cross_validation: Classification for {file} using classifier {self.classifier_name} starting:")
+        data = data.to_numpy()  # convert to numpy array
+        classes = classes.values.tolist()  # convert to list
+        # acc = []  # create list to store accuracies
+        skf = StratifiedKFold(n_splits=n_splits, shuffle=True)  # 10-fold split with data shuffle
+        skf.get_n_splits(data, classes)  # get the splits using skf
+        for train_index, test_index in skf.split(data, classes):  # split the data
+            # get train and test data
+            train_d = data[train_index]
+            train_c = [classes[j] for j in train_index]
+            test_d = data[test_index]
+            test_c = [classes[j] for j in test_index]
+
+            self.classifier.fit(train_d, train_c)  # classify
+            # Evaluate model on testing data
+            y_pred = self.classifier.predict(test_d)
+            a = accuracy_score(y_pred, test_c)  # get accuracy
+            self.accuracies.append(a)  # add accuracy to list
+        logger.info(f"cross_validation: Cross validation scores for {file} using classifier {self.classifier_name} "
+                    f"--> {self.accuracies}")
+        logger.info(f"cross_validation: Average --> {statistics.mean(self.accuracies)}")
+        logger.info(f"cross_validation: Number of CV Scores used in Average --> {len(self.accuracies)}")
+        return self.accuracies
+
+    def calculate_stats(self):
+        standard_deviation = statistics.stdev(self.accuracies)
+        mean = statistics.mean(self.accuracies)
+        maximum = max(self.accuracies)
+        minimum = min(self.accuracies)
+        return standard_deviation, mean, maximum, minimum
+
+    def __iter__(self):
+        self._index = 0
+        return self
+
+    def __next__(self):
+        if self._index >= len(self.accuracies):
+            raise StopIteration
+        else:
+            accuracy = self.accuracies[self._index]
+            self._index += 1
+            return accuracy
+
+    def __repr__(self):
+        return f'Classifier of type {self.classifier_name}'
+
+
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 handler = logging.StreamHandler(sys.stdout)
@@ -413,8 +471,21 @@ def classify_dataset(file, a, b):
     logger.info(f"run_all_classifiers: Finished for file --> {file}")
     return svm_results, nn_results, rf_results, lr_results, nb_results
 
-
 # move_invalid_datasets()
 # run_all_classifiers()
 # create_meta_dataset()
 # classify_metafile()
+
+
+test_classifier = Classifier(svm.SVC(), 'Support Vector Machine')
+print(test_classifier)
+for accuracy in test_classifier:
+    print(accuracy)
+print('\n')
+standard_deviation, mean, maximum, minimum = test_classifier.calculate_stats()
+print(standard_deviation)
+print(mean)
+print(maximum)
+print(minimum)
+data, a, b = preprocess_data(path_to_csvs, 'updated_iris_basic.csv')
+test_classifier.cross_validation(a, b, 'updated_iris_basic.csv')
