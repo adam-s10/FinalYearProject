@@ -56,7 +56,7 @@ class Classifier:
         data = data.to_numpy()  # convert to numpy array
         classes = classes.values.tolist()  # convert to list
         # acc = []  # create list to store accuracies
-        skf = StratifiedKFold(n_splits=n_splits, shuffle=True)  # 10-fold split with data shuffle
+        skf = StratifiedKFold(n_splits=n_splits, shuffle=True)  # n-fold split with data shuffle
         skf.get_n_splits(data, classes)  # get the splits using skf
         for train_index, test_index in skf.split(data, classes):  # split the data
             # get train and test data
@@ -99,6 +99,31 @@ class Classifier:
         return f'Classifier of type {self.classifier_name}'
 
 
+# TODO: add comment to describe the code
+def verify_data_classifies(data, classes):
+    # TODO: wrap in a try/except block once error is known - done
+    classifier = tree.DecisionTreeClassifier(criterion='gini')
+    try:
+        classifier.fit(data, classes.values.ravel())
+    except ValueError:
+        return None
+    # Evaluate model on testing data
+    y_pred = classifier.predict(data)
+    acc = accuracy_score(y_pred, classes.values.ravel())
+    return acc
+
+    # try:
+    #     # If all cases pass and file classifies do nothing
+    #     classifier.fit(a, b.values.ravel())
+    #     # Evaluate model on testing data
+    #     y_pred = classifier.predict(a)
+    #     acc = accuracy_score(y_pred, b.values.ravel())
+    #     logger.info(f"move_invalid_datasets: Accuracy score for {file} returned --> {acc}")
+    # except:
+    #     # If classifier fails, return -5
+    #     logger.warning(f"move_invalid_datasets: Something went wrong with --> {file}")
+
+
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 handler = logging.StreamHandler(sys.stdout)
@@ -132,7 +157,83 @@ def write_meta_data(file, columns, rows, minimum, maximum, sd, mean, best_classi
         f.write(f"{file},{columns},{rows},{minimum},{maximum},{sd},{mean},{best_classifier}\n")
 
 
+# TODO: consider moving to dataManager.py -
 def move_invalid_datasets():
+    too_few_rows, too_few_columns, too_big, one_target_variable, fails_to_classify = (0,) * 5
+    # too_few_rows = 0
+    # too_few_columns = 0
+    # too_big = 0
+    # one_target_variable = 0
+    # fails_to_classify = 0
+    for file in os.listdir(path_to_csvs):
+        logger.info(f"move_invalid_datasets: File to be classified --> {file}")
+        data, a, b = preprocess_data(path_to_csvs, file)
+
+        # Return -1 if file has too few columns
+        x = len(data.columns)
+        if x <= 2:
+            logger.warning(f"move_invalid_datasets: {file} has too few columns")
+            # write_failed_files(file, -1, "too few columns")
+            shutil.move(f"{path_to_csvs}/{file}", f"D:/PycharmProjects/FinalYearProject/invalidDatasets/{file}")
+            too_few_columns += 1
+            continue
+
+        # If data set has less than 100 rows, return -2
+        if data.shape[0] < 100:
+            logger.warning(f"move_invalid_datasets: {file} has too few rows")
+            # write_failed_files(file, -2, "too few rows")
+            shutil.move(f"{path_to_csvs}/{file}", f"D:/PycharmProjects/FinalYearProject/invalidDatasets/{file}")
+            too_few_rows += 1
+            continue
+
+        # If greater than xMB return -3
+        z = os.path.getsize(f"{path_to_csvs}/{file}")
+        logger.info(f"move_invalid_datasets: Size of {file} --> {z}")
+        z = z / (pow(1024, 2))
+        logger.info(f"move_invalid_datasets: Size of {file} in MB --> {z}")
+        if z > 2:
+            logger.warning(f"move_invalid_datasets: {file} is too big")
+            # write_failed_files(file, -3, "file is too large")
+            shutil.move(f"{path_to_csvs}/{file}", f"D:/PycharmProjects/FinalYearProject/invalidDatasets/{file}")
+            too_big += 1
+            continue
+
+        s = b.nunique(axis="rows").to_list()[0]  # use pandas to get unique elements in each row of targets column
+        if s == 1:  # If target column only contains 1 value
+            logger.warning(f"move_invalid_datasets: {file} only contains 1 variable in target column")
+            # write_failed_files(file, -4, "only 1 variable in target column")  # write to file with code -4
+            # move file to invalidDatasets
+            shutil.move(f"{path_to_csvs}/{file}",
+                        f"D:/PycharmProjects/FinalYearProject/invalidDatasets/{file}")
+            one_target_variable += 1  # count of this failure
+            continue  # move onto next file
+
+        # If data does classify
+        data_classified = verify_data_classifies(a, b)
+        if data_classified:
+            logger.info(f"move_invalid_datasets: Accuracy score for {file} returned --> {data_classified}")
+        else:
+            # If classifier fails, return -5
+            logger.warning(f"move_invalid_datasets: Something went wrong with --> {file}")
+            # write_failed_files(file, -5, "file failed to classify")
+            shutil.move(f"{path_to_csvs}/{file}", f"D:/PycharmProjects/FinalYearProject/invalidDatasets/{file}")
+            fails_to_classify += 1
+
+    print("")
+    total_invalid = too_few_rows + too_few_columns + too_big + one_target_variable + fails_to_classify
+    logger.info(f"move_invalid_datasets: Total Number of files --> {len(csv_files)}")
+    logger.info(f"move_invalid_datasets: Total number of invalid files --> {total_invalid}")
+    logger.info(f"move_invalid_datasets: Number of files with too few rows --> {too_few_rows}")
+    logger.info(f"move_invalid_datasets: Number of files with too few columns --> {too_few_columns}")
+    logger.info(f"move_invalid_datasets: Number of files which were too big  --> {too_big}")
+    logger.info(f"move_invalid_datasets: Number of files with only 1 variable in target column --> "
+                f"{one_target_variable}")
+    logger.info(f"move_invalid_datasets: Number of files which failed to classify --> {fails_to_classify}")
+
+
+# TODO: Replicate same functionality after abstracting checks -
+# TODO: Remove duplicate code -
+def move_invalid_datasets_old():
     too_few_rows = 0
     too_few_columns = 0
     too_big = 0
@@ -284,6 +385,9 @@ def run_all_classifiers():
 
 
 # Cross validation method
+# TODO: Move function to class Classifier - Done
+# TODO: Verify functionality remains the same
+# TODO: Remove duplicate code -
 def cross_validation(classifier, data, classes, classifier_name, file):
     logger.info(f"cross_validation: Classification for {file} using classifier {classifier_name} starting:")
     data = data.to_numpy()  # convert to numpy array
@@ -322,6 +426,9 @@ def preprocess_data(path, file):
 
 
 # Returns standard deviation, mean, maximum, minimum of the provided accuracy
+# TODO: Move function to class Classifier - Done
+# TODO: Verify functionality remains the same
+# TODO: Remove duplicate code -
 def calculate_stats(acc):
     standard_deviation = statistics.stdev(acc)
     mean = statistics.mean(acc)
@@ -471,21 +578,29 @@ def classify_dataset(file, a, b):
     logger.info(f"run_all_classifiers: Finished for file --> {file}")
     return svm_results, nn_results, rf_results, lr_results, nb_results
 
-
 # move_invalid_datasets()
 # run_all_classifiers()
 # create_meta_dataset()
 # classify_metafile()
 
-test_classifier = Classifier(svm.SVC(), 'Support Vector Machine')
-print(test_classifier)
-for accuracy in test_classifier:
-    print(accuracy)
-print('\n')
-standard_deviation, mean, maximum, minimum = test_classifier.calculate_stats()
-print(standard_deviation)
-print(mean)
-print(maximum)
-print(minimum)
-data, a, b = preprocess_data(path_to_csvs, 'updated_iris_basic.csv')
-test_classifier.cross_validation(a, b, 'updated_iris_basic.csv')
+
+# -------------------- QUICK TESTS --------------------
+# test_classifier = Classifier(svm.SVC(), 'Support Vector Machine')
+# print(test_classifier)
+# for accuracy in test_classifier:
+#     print(accuracy)
+# print('\n')
+# standard_deviation, mean, maximum, minimum = test_classifier.calculate_stats()
+# print(standard_deviation)
+# print(mean)
+# print(maximum)
+# print(minimum)
+# data, a, b = preprocess_data(path_to_csvs, 'updated_01a_0_100_AccGyr_0_0_0_03c_11_5f0eeba6ecd5dfaf5eb6c0c6.csv')
+# test_classifier.cross_validation(a, b, 'updated_iris_basic.csv')
+# print(test_classifier.accuracies)
+# too_few_rows = too_few_columns = too_big = one_target_variable = fails_to_classify = 0
+# too_few_rows += 1
+# print(too_few_rows)
+# print(too_few_columns, too_big, one_target_variable, fails_to_classify)
+# verify_data_classifies(a, b
+move_invalid_datasets()
