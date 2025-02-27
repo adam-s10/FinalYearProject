@@ -76,6 +76,8 @@ class Classifier:
         logger.info(f"cross_validation: Number of CV Scores used in Average --> {len(self.accuracies)}")
         return self.accuracies
 
+    # Uses values stored in self.accuracies (generated using cross_validation method) to calculate standard deviation,
+    # mean, maximum and minimum for those accuracies
     def calculate_stats(self):
         standard_deviation = statistics.stdev(self.accuracies)
         mean = statistics.mean(self.accuracies)
@@ -99,7 +101,7 @@ class Classifier:
         return f'Classifier of type {self.classifier_name}'
 
 
-# TODO: add comment to describe the code
+# Tests that a dataset can classify with a simple decision tree
 def verify_data_classifies(data, classes, file):
     classifier = tree.DecisionTreeClassifier(criterion='gini')
     try:
@@ -112,17 +114,6 @@ def verify_data_classifies(data, classes, file):
     acc = accuracy_score(y_pred, classes.values.ravel())
     logger.info(f"verify_data_classifies: Accuracy score for {file} returned --> {acc}")
     return acc
-
-    # try:
-    #     # If all cases pass and file classifies do nothing
-    #     classifier.fit(a, b.values.ravel())
-    #     # Evaluate model on testing data
-    #     y_pred = classifier.predict(a)
-    #     acc = accuracy_score(y_pred, b.values.ravel())
-    #     logger.info(f"move_invalid_datasets: Accuracy score for {file} returned --> {acc}")
-    # except:
-    #     # If classifier fails, return -5
-    #     logger.warning(f"move_invalid_datasets: Something went wrong with --> {file}")
 
 
 logger = logging.getLogger()
@@ -139,7 +130,7 @@ csv_files = os.listdir(path_to_csvs)  # TODO: remove redundant global variable
 
 # writes accuracy scores to a text file
 def write_accuracy_score(file, classifier_name, scores_as_str, average):
-    with FileManager('classification_results.txt', 'a',
+    with FileManager('classification_results6.txt', 'a',
                      file_root='D:/PycharmProjects/FinalYearProject/MetaDataFiles') as f:
         f.write(f"{file},{classifier_name},{scores_as_str},{average}\n")
 
@@ -203,26 +194,24 @@ def move_invalid_datasets(source, destination='D:/PycharmProjects/FinalYearProje
     shutil.move(source, destination)
 
 
-# TODO: abstract individual checks i.e. too few columns, rows, etc - Done
-# TODO: confirm functionality remains the same -
 # TODO: consider moving to dataManager.py -
 def validate_datasets(directory_root):
     too_few_rows, too_few_columns, too_big, one_target_variable, fails_to_classify = (0,) * 5
     total_number_of_files = len(os.listdir(directory_root))
     for file in os.listdir(directory_root):
         logger.info(f"validate_data_sets: File to be validated --> {file}")
-        data, a, b = preprocess_data(directory_root, file)
+        dataset, data, classes = preprocess_data(directory_root, file)
         file_root = f"{directory_root}/{file}"
 
         # Move dataset with too few columns and write error code (-1) to file
-        if check_too_few_columns(data, file):
+        if check_too_few_columns(dataset, file):
             # write_failed_files(file, -1, "too few columns")
             move_invalid_datasets(file_root)
             too_few_columns += 1
             continue
 
         # Move dataset with too few rows and write error code (-2) to file
-        if check_too_few_rows(data, file):
+        if check_too_few_rows(dataset, file):
             # write_failed_files(file, -2, "too few rows")
             move_invalid_datasets(file_root)
             too_few_rows += 1
@@ -236,14 +225,14 @@ def validate_datasets(directory_root):
             continue
 
         # Move dataset with only 1 unique variable in target column and write error code (-4) to file
-        if check_more_than_one_element(b, file):
+        if check_more_than_one_element(classes, file):
             # write_failed_files(file, -4, "only 1 variable in target column")
             move_invalid_datasets(file_root)
             one_target_variable += 1
             continue
 
         # Move dataset that does not classify and write error code (-5) to file
-        if not verify_data_classifies(a, b, file):
+        if not verify_data_classifies(data, classes, file):
             # write_failed_files(file, -5, "file failed to classify")
             move_invalid_datasets(file_root)
             fails_to_classify += 1
@@ -259,8 +248,7 @@ def validate_datasets(directory_root):
     logger.info(f"validate_datasets: Number of files which failed to classify --> {fails_to_classify}")
 
 
-# TODO: Replicate same functionality after abstracting checks -
-# TODO: Remove duplicate code -
+# TODO: Remove duplicate code - remove by 03/01/25
 def move_invalid_datasets_old():
     too_few_rows = 0
     too_few_columns = 0
@@ -344,12 +332,72 @@ def run_all_classifiers():
     error_count = 0
     for file in os.listdir(path_to_csvs):
         logger.info(f"File to be classified --> {file}")
-        data, a, b = preprocess_data(path_to_csvs, file)
+        dataset, data, classes = preprocess_data(path_to_csvs, file)
+
+        # Classify for Support Vector Machine
+        try:
+            svm_classifier = Classifier(svm.SVC(), 'Support Vector Machine')
+            svm_acc = svm_classifier.cross_validation(data, classes, file)
+        except ValueError:
+            logger.error(f"{file} raised value error, skipping")
+            shutil.move(f"{path_to_csvs}/{file}", f"D:/PycharmProjects/FinalYearProject/inconsistentFailures/{file}")
+            error_count += 1
+            continue
+
+        svm_acc_str = ','.join(map(str, svm_acc))
+        write_accuracy_score(file, "SVM", svm_acc_str, statistics.mean(svm_acc))
+        logger.info(f"Classification for {file} using classifier SVM finished!")
+
+        # Classify for Neural Network
+        nn_classifier = Classifier(MLPClassifier(max_iter=500), 'Neural Network')
+        nn_acc = nn_classifier.cross_validation(data, classes, file)
+
+        nn_acc_str = ','.join(map(str, nn_acc))
+        write_accuracy_score(file, "NN", nn_acc_str, statistics.mean(nn_acc))
+        logger.info(f"Classification for {file} using classifier NN finished!")
+
+        # Classify for Random Forest
+        rf_classifier = Classifier(RandomForestClassifier(), 'Random Forest')
+        rf_acc = rf_classifier.cross_validation(data, classes, file)
+
+        rf_acc_str = ','.join(map(str, rf_acc))
+        write_accuracy_score(file, "RF", rf_acc_str, statistics.mean(rf_acc))
+        logger.info(f"Classification for {file} using classifier RF finished!")
+
+        # Classify for Logistic Regression
+        lr_classifier = Classifier(LogisticRegression(), 'Logistic Regression')
+        lr_acc = lr_classifier.cross_validation(data, classes, file)
+
+        lr_acc_str = ','.join(map(str, lr_acc))
+        write_accuracy_score(file, "LR", lr_acc_str, statistics.mean(lr_acc))
+        logger.info(f"Classification for {file} using classifier LR finished!")
+
+        # Classify for Naive Bayes
+        nb_classifier = Classifier(GaussianNB(), 'Naive Bayes')
+        nb_acc = nb_classifier.cross_validation(data, classes, file)
+
+        nb_acc_str = ','.join(map(str, nb_acc))
+        write_accuracy_score(file, "NB", nb_acc_str, statistics.mean(nb_acc))
+        logger.info(f"Classification for {file} using classifier NB finished!")
+
+        # Once all 5 classifiers are complete move the dataset to new folder
+        shutil.move(f"{path_to_csvs}/{file}", f"D:/PycharmProjects/FinalYearProject/completedDatasets/{file}")
+    print("number of errors --> ", error_count)
+
+
+# Runs all datasets in provided directory to ensure they will work for generating meta-dataset.
+# Writes the results to a file to check for anomalies, such as NAN
+# TODO: verify functionality remains the same
+def run_all_classifiers_old():
+    error_count = 0
+    for file in os.listdir(path_to_csvs):
+        logger.info(f"File to be classified --> {file}")
+        dataset, data, classes = preprocess_data(path_to_csvs, file)
 
         # Classify for Support Vector Machine
         try:
             svm_classifier = svm.SVC()
-            svm_acc = cross_validation(svm_classifier, a, b, "SVM", file)
+            svm_acc = cross_validation(svm_classifier, data, classes, "SVM", file)
         except ValueError:
             logger.error(f"{file} raised value error, skipping")
             shutil.move(f"{path_to_csvs}/{file}", f"D:/PycharmProjects/FinalYearProject/inconsistentFailures/{file}")
@@ -365,7 +413,7 @@ def run_all_classifiers():
 
         # Classify for neural network
         nn_classifier = MLPClassifier(max_iter=500)
-        nn_acc = cross_validation(nn_classifier, a, b, "NN", file)
+        nn_acc = cross_validation(nn_classifier, data, classes, "NN", file)
 
         nn_st = str(nn_acc)
         nn_st = nn_st.replace("[", "")
@@ -376,7 +424,7 @@ def run_all_classifiers():
 
         # Classify for random forrest
         rf_classifier = RandomForestClassifier()
-        rf_acc = cross_validation(rf_classifier, a, b, "RF", file)
+        rf_acc = cross_validation(rf_classifier, data, classes, "RF", file)
 
         rf_st = str(rf_acc)
         rf_st = rf_st.replace("[", "")
@@ -387,7 +435,7 @@ def run_all_classifiers():
 
         # Classify for Logistic Regression
         lr_classifier = LogisticRegression()
-        lr_acc = cross_validation(lr_classifier, a, b, "LR", file)
+        lr_acc = cross_validation(lr_classifier, data, classes, "LR", file)
 
         lr_st = str(lr_acc)
         lr_st = lr_st.replace("[", "")
@@ -398,7 +446,7 @@ def run_all_classifiers():
 
         # Classify for Naive Bayes
         nb_classifier = GaussianNB()
-        nb_acc = cross_validation(nb_classifier, a, b, "NB", file)
+        nb_acc = cross_validation(nb_classifier, data, classes, "NB", file)
 
         nb_st = str(nb_acc)
         nb_st = nb_st.replace("[", "")
@@ -413,8 +461,6 @@ def run_all_classifiers():
 
 
 # Cross validation method
-# TODO: Move function to class Classifier - Done
-# TODO: Verify functionality remains the same - Done
 # TODO: Remove duplicate code - remove by 03/01/25
 def cross_validation(classifier, data, classes, classifier_name, file):
     logger.info(f"cross_validation: Classification for {file} using classifier {classifier_name} starting:")
@@ -444,17 +490,16 @@ def cross_validation(classifier, data, classes, classifier_name, file):
 # Returns the features and targets of the provided dataset
 def preprocess_data(path, file):
     logger.info(f"preprocess_data: Starting for file --> {file}")
-    data = pd.read_csv(f"{path}/{file}", header=None)  # Read data using pandas
-    data = data.dropna()  # Remove rows with NA values
+    dataset = pd.read_csv(f"{path}/{file}", header=None)  # Read data using pandas
+    dataset = dataset.dropna()  # Remove rows with NA values
     # Split data into features and targets
-    a = data.iloc[:, :-1]  # All columns except the last one, features
-    b = data.iloc[:, -1:]  # Only the last column, targets
+    data = dataset.iloc[:, :-1]  # All columns except the last one, features
+    classes = dataset.iloc[:, -1:]  # Only the last column, targets
     logger.info(f"preprocess_data: Finished for file --> {file}")
-    return data, a, b
+    return dataset, data, classes
 
 
 # Returns standard deviation, mean, maximum, minimum of the provided accuracy
-# TODO: Move function to class Classifier - Done
 # TODO: Verify functionality remains the same
 # TODO: Remove duplicate code - remove by 03/01/25
 def calculate_stats(acc):
@@ -469,14 +514,14 @@ def calculate_stats(acc):
 def create_meta_dataset():
     error_count = 0
     for file in os.listdir("D:/PycharmProjects/FinalYearProject/csvDatasets"):
-        data, a, b = preprocess_data(path_to_csvs, file)
-        rows = data.shape[0]  # Get rows using pandas
-        columns = data.shape[1]  # Get columns using pandas
+        dataset, data, classes = preprocess_data(path_to_csvs, file)
+        rows = dataset.shape[0]  # Get rows using pandas
+        columns = dataset.shape[1]  # Get columns using pandas
 
         # Classify for Support Vector Machine
         try:
             svm_classifier = svm.SVC()
-            svm_acc = cross_validation(svm_classifier, a, b, "SVM", file)
+            svm_acc = cross_validation(svm_classifier, data, classes, "SVM", file)
         except ValueError:  # If fails; skip
             logger.error(f"{file} raised value error, skipping")
             shutil.move(f"{path_to_csvs}/{file}", f"D:/PycharmProjects/FinalYearProject/inconsistentFailures/{file}")
@@ -490,7 +535,7 @@ def create_meta_dataset():
 
         # Classify for neural network
         nn_classifier = MLPClassifier(max_iter=500)
-        nn_acc = cross_validation(nn_classifier, a, b, "NN", file)
+        nn_acc = cross_validation(nn_classifier, data, classes, "NN", file)
         nn_sd, nn_mean, nn_max, nn_min = calculate_stats(nn_acc)
         logger.info(f"create_meta_dataset: NN returned mean --> {nn_mean}")
         logger.info(f"create_meta_dataset: NN returned standard deviation --> {nn_sd}")
@@ -499,7 +544,7 @@ def create_meta_dataset():
 
         # Classify for random forrest
         rf_classifier = RandomForestClassifier()
-        rf_acc = cross_validation(rf_classifier, a, b, "RF", file)
+        rf_acc = cross_validation(rf_classifier, data, classes, "RF", file)
         rf_sd, rf_mean, rf_max, rf_min = calculate_stats(rf_acc)
         logger.info(f"create_meta_dataset: RF returned mean --> {rf_mean}")
         logger.info(f"create_meta_dataset: RF returned standard deviation --> {rf_sd}")
@@ -508,7 +553,7 @@ def create_meta_dataset():
 
         # Classify for Logistic Regression
         lr_classifier = LogisticRegression()
-        lr_acc = cross_validation(lr_classifier, a, b, "LR", file)
+        lr_acc = cross_validation(lr_classifier, data, classes, "LR", file)
         lr_sd, lr_mean, lr_max, lr_min = calculate_stats(lr_acc)
         logger.info(f"create_meta_dataset: LR returned mean --> {lr_mean}")
         logger.info(f"create_meta_dataset: LR returned standard deviation --> {lr_sd}")
@@ -517,7 +562,7 @@ def create_meta_dataset():
 
         # Classify for Naive Bayes
         nb_classifier = GaussianNB()
-        nb_acc = cross_validation(nb_classifier, a, b, "NB", file)
+        nb_acc = cross_validation(nb_classifier, data, classes, "NB", file)
         nb_sd, nb_mean, nb_max, nb_min = calculate_stats(nb_acc)
         logger.info(f"create_meta_dataset: NB returned mean --> {nb_mean}")
         logger.info(f"create_meta_dataset: NB returned standard deviation --> {nb_sd}")
@@ -606,8 +651,9 @@ def classify_dataset(file, a, b):
     logger.info(f"run_all_classifiers: Finished for file --> {file}")
     return svm_results, nn_results, rf_results, lr_results, nb_results
 
+
 # move_invalid_datasets()
-# run_all_classifiers()
+run_all_classifiers()
 # create_meta_dataset()
 # classify_metafile()
 
@@ -641,4 +687,29 @@ def classify_dataset(file, a, b):
 # for acc in test_classifier:
 #     print(acc)
 # move_invalid_datasets(f"{path_to_csvs}/updated_rbd1.csv")
-validate_datasets('D:/PycharmProjects/FinalYearProject/csvDatasets')
+# validate_datasets('D:/PycharmProjects/FinalYearProject/csvDatasets')
+# for file in os.listdir("D:/PycharmProjects/FinalYearProject/csvDatasets"):
+#     dataset, data, classes = preprocess_data(path_to_csvs, file)
+#     rows = dataset.shape[0]  # Get rows using pandas
+#     columns = dataset.shape[1]  # Get columns using pandas
+#
+#     # Classify for Support Vector Machine
+#     try:
+#         svm_classifier = Classifier(svm.SVC(), 'Support Vector Machine')
+#         svm_acc = svm_classifier.cross_validation(data, classes, file)
+#     except ValueError:  # If fails; skip
+#         logger.error(f"{file} raised value error, skipping")
+#         shutil.move(f"{path_to_csvs}/{file}", f"D:/PycharmProjects/FinalYearProject/inconsistentFailures/{file}")
+#         continue
+#     svm_join = ','.join(map(str, svm_acc))
+#     svm_st = str(svm_acc)
+#     svm_st = svm_st.replace("[", "")
+#     svm_st = svm_st.replace("]", "")
+#     svm_st = svm_st.replace(" ", "")
+#     print(svm_st)
+#     print(svm_join)
+#     print(type(svm_st))
+#     print(type(svm_join))
+#     # write_accuracy_score(file, "SVM", svm_st, statistics.mean(svm_acc))
+#     logger.info(f"Classification for {file} using classifier SVM finished!")
+
