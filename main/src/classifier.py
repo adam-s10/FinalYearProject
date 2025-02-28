@@ -83,7 +83,7 @@ class Classifier:
         mean = statistics.mean(self.accuracies)
         maximum = max(self.accuracies)
         minimum = min(self.accuracies)
-        return standard_deviation, mean, maximum, minimum
+        return float(standard_deviation), float(mean), float(maximum), float(minimum)
 
     def __iter__(self):
         self._index = 0
@@ -125,27 +125,26 @@ handler.setFormatter(formatter)
 logger.addHandler(handler)
 
 path_to_csvs = "D:/PycharmProjects/FinalYearProject/csvDatasets"
-csv_files = os.listdir(path_to_csvs)  # TODO: remove redundant global variable
 
 
 # writes accuracy scores to a text file
 def write_accuracy_score(file, classifier_name, scores_as_str, average):
-    with FileManager('classification_results6.txt', 'a',
+    with FileManager('classification_results', 'a',
                      file_root='D:/PycharmProjects/FinalYearProject/MetaDataFiles') as f:
         f.write(f"{file},{classifier_name},{scores_as_str},{average}\n")
 
 
 # writes any failures that occur during execution to a text file
 def write_failed_files(file, error_code, error_message):
-    with FileManager('failed_files.txt', 'a',
+    with FileManager('failed_files', 'a',
                      file_root='D:/PycharmProjects/FinalYearProject/MetaDataFiles') as f:
         f.write(f"{file},{error_code},{error_message}\n")
 
 
 # Writes to a file to be turned into the meta-dataset (csv)
 def write_meta_data(file, columns, rows, minimum, maximum, sd, mean, best_classifier):
-    with FileManager('metadata_file.csv', 'a',
-                     file_root='D:/PycharmProjects/FinalYearProject/MetaDataFiles') as f:
+    with FileManager('metadata_file3', 'a', '.csv',
+                     'D:/PycharmProjects/FinalYearProject/MetaDataFiles') as f:
         f.write(f"{file},{columns},{rows},{minimum},{maximum},{sd},{mean},{best_classifier}\n")
 
 
@@ -248,84 +247,6 @@ def validate_datasets(directory_root):
     logger.info(f"validate_datasets: Number of files which failed to classify --> {fails_to_classify}")
 
 
-# TODO: Remove duplicate code - remove by 03/01/25
-def move_invalid_datasets_old():
-    too_few_rows = 0
-    too_few_columns = 0
-    too_big = 0
-    one_target_variable = 0
-    fails_to_classify = 0
-    for file in os.listdir(path_to_csvs):
-        logger.info(f"move_invalid_datasets: File to be classified --> {file}")
-        data, a, b = preprocess_data(path_to_csvs, file)
-
-        # Return -1 if file has too few columns
-        x = len(data.columns)
-        if x <= 2:
-            logger.warning(f"move_invalid_datasets: {file} has too few columns")
-            write_failed_files(file, -1, "too few columns")
-            shutil.move(f"{path_to_csvs}/{file}", f"D:/PycharmProjects/FinalYearProject/invalidDatasets/{file}")
-            too_few_columns += 1
-            continue
-
-        # If data set has less than 100 rows, return -2
-        if data.shape[0] < 100:
-            logger.warning(f"move_invalid_datasets: {file} has too few rows")
-            write_failed_files(file, -2, "too few rows")
-            shutil.move(f"{path_to_csvs}/{file}", f"D:/PycharmProjects/FinalYearProject/invalidDatasets/{file}")
-            too_few_rows += 1
-            continue
-
-        # If greater than xMB return -3
-        z = os.path.getsize(f"{path_to_csvs}/{file}")
-        logger.info(f"move_invalid_datasets: Size of {file} --> {z}")
-        z = z / (pow(1024, 2))
-        logger.info(f"move_invalid_datasets: Size of {file} in MB --> {z}")
-        if z > 2:
-            logger.warning(f"move_invalid_datasets: {file} is too big")
-            write_failed_files(file, -3, "file is too large")
-            shutil.move(f"{path_to_csvs}/{file}", f"D:/PycharmProjects/FinalYearProject/invalidDatasets/{file}")
-            too_big += 1
-            continue
-
-        s = b.nunique(axis="rows").to_list()[0]  # use pandas to get unique elements in each row of targets column
-        if s == 1:  # If target column only contains 1 value
-            logger.warning(f"move_invalid_datasets: {file} only contains 1 variable in target column")
-            write_failed_files(file, -4, "only 1 variable in target column")  # write to file with code -4
-            # move file to invalidDatasets
-            shutil.move(f"{path_to_csvs}/{file}",
-                        f"D:/PycharmProjects/FinalYearProject/invalidDatasets/{file}")
-            one_target_variable += 1  # count of this failure
-            continue  # move onto next file
-
-        # Run classifier after data processing
-        classifier = tree.DecisionTreeClassifier(criterion='gini')
-        try:
-            # If all cases pass and file classifies do nothing
-            classifier.fit(a, b.values.ravel())
-            # Evaluate model on testing data
-            y_pred = classifier.predict(a)
-            acc = accuracy_score(y_pred, b.values.ravel())
-            logger.info(f"move_invalid_datasets: Accuracy score for {file} returned --> {acc}")
-        except:
-            # If classifier fails, return -5
-            logger.warning(f"move_invalid_datasets: Something went wrong with --> {file}")
-            write_failed_files(file, -5, "file failed to classify")
-            shutil.move(f"{path_to_csvs}/{file}", f"D:/PycharmProjects/FinalYearProject/invalidDatasets/{file}")
-            fails_to_classify += 1
-
-    print("")
-    total_invalid = too_few_rows + too_few_columns + too_big + one_target_variable + fails_to_classify
-    logger.info(f"move_invalid_datasets: Total Number of files --> {len(csv_files)}")
-    logger.info(f"move_invalid_datasets: Total number of invalid files --> {total_invalid}")
-    logger.info(f"move_invalid_datasets: Number of files with too few rows --> {too_few_rows}")
-    logger.info(f"move_invalid_datasets: Number of files with too few columns --> {too_few_columns}")
-    logger.info(f"move_invalid_datasets: Number of files which were too big  --> {too_big}")
-    logger.info(f"move_invalid_datasets: Number of files with only 1 variable in target column --> "
-                f"{one_target_variable}")
-    logger.info(f"move_invalid_datasets: Number of files which failed to classify --> {fails_to_classify}")
-
-
 # Runs all datasets in provided directory to ensure they will work for generating meta-dataset.
 # Writes the results to a file to check for anomalies, such as NAN
 def run_all_classifiers():
@@ -379,15 +300,13 @@ def run_all_classifiers():
         nb_acc_str = ','.join(map(str, nb_acc))
         write_accuracy_score(file, "NB", nb_acc_str, statistics.mean(nb_acc))
         logger.info(f"Classification for {file} using classifier NB finished!")
-
-        # Once all 5 classifiers are complete move the dataset to new folder
-        shutil.move(f"{path_to_csvs}/{file}", f"D:/PycharmProjects/FinalYearProject/completedDatasets/{file}")
     print("number of errors --> ", error_count)
 
 
 # Runs all datasets in provided directory to ensure they will work for generating meta-dataset.
 # Writes the results to a file to check for anomalies, such as NAN
-# TODO: verify functionality remains the same
+# TODO: verify functionality remains the same - Done
+# TODO: Remove duplicate code - remove by 03/05/25
 def run_all_classifiers_old():
     error_count = 0
     for file in os.listdir(path_to_csvs):
@@ -512,6 +431,84 @@ def calculate_stats(acc):
 
 # Creates the meta-dataset to make predictions on what the best classifier would be for a given dataset
 def create_meta_dataset():
+    for file in os.listdir("D:/PycharmProjects/FinalYearProject/csvDatasets"):
+        dataset, data, classes = preprocess_data(path_to_csvs, file)
+        rows = float(dataset.shape[0])  # Get rows using pandas
+        columns = float(dataset.shape[1])  # Get columns using pandas
+
+        # Classify for Support Vector Machine
+        svm_classifier = Classifier(svm.SVC(), 'Support Vector Machine')
+        svm_classifier.cross_validation(data, classes, file)
+        svm_sd, svm_mean, svm_max, svm_min = svm_classifier.calculate_stats()
+        logger.info(f"create_meta_dataset: SVM returned mean --> {svm_mean}")
+        logger.info(f"create_meta_dataset: SVM returned standard deviation --> {svm_sd}")
+        logger.info(f"create_meta_dataset: SVM returned minimum --> {svm_min}")
+        logger.info(f"create_meta_dataset: SVM returned maximum --> {svm_max}")
+
+        # Classify for neural network
+        nn_classifier = Classifier(MLPClassifier(max_iter=500), 'Neural Network')
+        nn_classifier.cross_validation(data, classes, file)
+        nn_sd, nn_mean, nn_max, nn_min = nn_classifier.calculate_stats()
+        logger.info(f"create_meta_dataset: NN returned mean --> {nn_mean}")
+        logger.info(f"create_meta_dataset: NN returned standard deviation --> {nn_sd}")
+        logger.info(f"create_meta_dataset: NN returned minimum --> {nn_min}")
+        logger.info(f"create_meta_dataset: NN returned maximum --> {nn_max}")
+
+        # Classify for random forrest
+        rf_classifier = Classifier(RandomForestClassifier(), 'Random Forest')
+        rf_classifier.cross_validation(data, classes, file)
+        rf_sd, rf_mean, rf_max, rf_min = rf_classifier.calculate_stats()
+        logger.info(f"create_meta_dataset: RF returned mean --> {rf_mean}")
+        logger.info(f"create_meta_dataset: RF returned standard deviation --> {rf_sd}")
+        logger.info(f"create_meta_dataset: RF returned minimum --> {rf_min}")
+        logger.info(f"create_meta_dataset: RF returned maximum --> {rf_max}")
+
+        # Classify for Logistic Regression
+        lr_classifier = Classifier(LogisticRegression(), 'Logistic Regression')
+        lr_classifier.cross_validation(data, classes, file)
+        lr_sd, lr_mean, lr_max, lr_min = lr_classifier.calculate_stats()
+        logger.info(f"create_meta_dataset: LR returned mean --> {lr_mean}")
+        logger.info(f"create_meta_dataset: LR returned standard deviation --> {lr_sd}")
+        logger.info(f"create_meta_dataset: LR returned minimum --> {lr_min}")
+        logger.info(f"create_meta_dataset: LR returned maximum --> {lr_max}")
+
+        # Classify for Naive Bayes
+        nb_classifier = Classifier(GaussianNB(), 'Naive Bayes')
+        nb_classifier.cross_validation(data, classes, file)
+        nb_sd, nb_mean, nb_max, nb_min = nb_classifier.calculate_stats()
+        logger.info(f"create_meta_dataset: NB returned mean --> {nb_mean}")
+        logger.info(f"create_meta_dataset: NB returned standard deviation --> {nb_sd}")
+        logger.info(f"create_meta_dataset: NB returned minimum --> {nb_min}")
+        logger.info(f"create_meta_dataset: NB returned maximum --> {nb_max}")
+
+        # ---Get the best classifier using mean---
+        # dictionary containing means
+        var = {svm_mean: "svm", nn_mean: "nn", rf_mean: "rf", lr_mean: "lr", nb_mean: "nb"}
+        switch_case = var.get(max(var))  # get the value with the highest mean
+        match switch_case:  # write to file depending on what was the best classifier
+            case "svm":
+                best_classifier = 1
+                write_meta_data(file, columns, rows, svm_min, svm_max, svm_sd, svm_mean, best_classifier)
+            case "nn":
+                best_classifier = 2
+                write_meta_data(file, columns, rows, nn_min, nn_max, nn_sd, nn_mean, best_classifier)
+            case "rf":
+                best_classifier = 3
+                write_meta_data(file, columns, rows, rf_min, rf_max, rf_sd, rf_mean, best_classifier)
+            case "lr":
+                best_classifier = 4
+                write_meta_data(file, columns, rows, lr_min, lr_max, lr_sd, lr_mean, best_classifier)
+            case "nb":
+                best_classifier = 5
+                write_meta_data(file, columns, rows, nb_min, nb_max, nb_sd, nb_mean, best_classifier)
+
+        # Once all 5 classifiers are complete move the dataset to new folder
+        shutil.move(f"{path_to_csvs}/{file}", f"D:/PycharmProjects/FinalYearProject/completedDatasets/{file}")
+
+
+# TODO: verify functionality remains the same
+# TODO: remove duplicate code
+def create_meta_dataset_old():
     error_count = 0
     for file in os.listdir("D:/PycharmProjects/FinalYearProject/csvDatasets"):
         dataset, data, classes = preprocess_data(path_to_csvs, file)
@@ -653,8 +650,8 @@ def classify_dataset(file, a, b):
 
 
 # move_invalid_datasets()
-run_all_classifiers()
-# create_meta_dataset()
+# run_all_classifiers()
+create_meta_dataset()
 # classify_metafile()
 
 
@@ -712,4 +709,3 @@ run_all_classifiers()
 #     print(type(svm_join))
 #     # write_accuracy_score(file, "SVM", svm_st, statistics.mean(svm_acc))
 #     logger.info(f"Classification for {file} using classifier SVM finished!")
-
