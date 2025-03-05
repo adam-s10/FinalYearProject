@@ -134,117 +134,11 @@ def write_accuracy_score(file, classifier_name, scores_as_str, average):
         f.write(f"{file},{classifier_name},{scores_as_str},{average}\n")
 
 
-# writes any failures that occur during execution to a text file
-def write_failed_files(file, error_code, error_message):
-    with FileManager('failed_files', 'a',
-                     file_root='D:/PycharmProjects/FinalYearProject/MetaDataFiles') as f:
-        f.write(f"{file},{error_code},{error_message}\n")
-
-
 # Writes to a file to be turned into the meta-dataset (csv)
 def write_meta_data(file, columns, rows, minimum, maximum, sd, mean, best_classifier):
     with FileManager('metadata_file4', 'a', '.csv',
                      'D:/PycharmProjects/FinalYearProject/MetaDataFiles') as f:
         f.write(f"{file},{columns},{rows},{minimum},{maximum},{sd},{mean},{best_classifier}\n")
-
-
-# If Number of columns are less than or equal to min_columns return True
-def check_too_few_columns(data, file_name, min_columns=2):
-    number_of_columns = len(data.columns)
-    if number_of_columns <= min_columns:
-        logger.warning(f"check_too_few_columns: {file_name} has below the minimum number of columns ({min_columns})")
-        return True
-    return False
-
-
-# If number of rows is less than min_rows return True
-def check_too_few_rows(data, file_name, min_rows=100):
-    number_of_rows = data.shape[0]
-    if number_of_rows < min_rows:
-        logger.warning(f"check_too_few_rows: {file_name} has below the minimum number of rows ({min_rows})")
-        return True
-    return False
-
-
-# If file size is greater than max_size (MiB) return True
-def check_file_too_large(path, file_name, max_size=2):
-    file_size = os.path.getsize(path)
-    logger.info(f"check_too_large: Size of {file_name} --> {file_size}")
-    file_size_mib = file_size / (1024 ** 2)  # convert file from bytes to MiB
-    logger.info(f"check_too_large: Size of {file_name} in MiB --> {file_size_mib}")
-    if file_size_mib > max_size:
-        logger.warning(f"check_too_large: {file_name} is greater than the max size ({max_size} MiB)")
-        return True
-    return False
-
-
-# If file has only 1 variable in target column return True
-def check_more_than_one_element(targets, file):
-    # use pandas to get unique elements in each row of targets column
-    number_of_unique_variables = targets.nunique(axis="rows").to_list()[0]
-    if number_of_unique_variables == 1:  # If target column only contains 1 value
-        logger.warning(f"check_more_than_one_element: {file} only contains 1 variable in target column")
-        return True
-    return False
-
-
-# Move a file from source to destination using shutil
-def move_invalid_datasets(source, destination='D:/PycharmProjects/FinalYearProject/invalidDatasets/'):
-    shutil.move(source, destination)
-
-
-# TODO: consider moving to dataManager.py -
-def validate_datasets(directory_root):
-    too_few_rows, too_few_columns, too_big, one_target_variable, fails_to_classify = (0,) * 5
-    total_number_of_files = len(os.listdir(directory_root))
-    for file in os.listdir(directory_root):
-        logger.info(f"validate_data_sets: File to be validated --> {file}")
-        dataset, data, classes = preprocess_data(directory_root, file)
-        file_root = f"{directory_root}/{file}"
-
-        # Move dataset with too few columns and write error code (-1) to file
-        if check_too_few_columns(dataset, file):
-            # write_failed_files(file, -1, "too few columns")
-            move_invalid_datasets(file_root)
-            too_few_columns += 1
-            continue
-
-        # Move dataset with too few rows and write error code (-2) to file
-        if check_too_few_rows(dataset, file):
-            # write_failed_files(file, -2, "too few rows")
-            move_invalid_datasets(file_root)
-            too_few_rows += 1
-            continue
-
-        # Move dataset that is too large and write error code (-3) to file
-        if check_file_too_large(file_root, file):
-            # write_failed_files(file, -3, "file is too large")
-            move_invalid_datasets(file_root)
-            too_big += 1
-            continue
-
-        # Move dataset with only 1 unique variable in target column and write error code (-4) to file
-        if check_more_than_one_element(classes, file):
-            # write_failed_files(file, -4, "only 1 variable in target column")
-            move_invalid_datasets(file_root)
-            one_target_variable += 1
-            continue
-
-        # Move dataset that does not classify and write error code (-5) to file
-        if not verify_data_classifies(data, classes, file):
-            # write_failed_files(file, -5, "file failed to classify")
-            move_invalid_datasets(file_root)
-            fails_to_classify += 1
-
-    print("")
-    total_invalid = too_few_rows + too_few_columns + too_big + one_target_variable + fails_to_classify
-    logger.info(f"validate_datasets: Total number of files checked --> {total_number_of_files}")
-    logger.info(f"validate_datasets: Total number of invalid files --> {total_invalid}")
-    logger.info(f"validate_datasets: Number of files with too few rows --> {too_few_rows}")
-    logger.info(f"validate_datasets: Number of files with too few columns --> {too_few_columns}")
-    logger.info(f"validate_datasets: Number of files which were too big  --> {too_big}")
-    logger.info(f"validate_datasets: Number of files with only 1 variable in target column --> {one_target_variable}")
-    logger.info(f"validate_datasets: Number of files which failed to classify --> {fails_to_classify}")
 
 
 # Runs all datasets in provided directory to ensure they will work for generating meta-dataset.
