@@ -143,7 +143,7 @@ def write_failed_files(file, error_code, error_message):
 
 # Writes to a file to be turned into the meta-dataset (csv)
 def write_meta_data(file, columns, rows, minimum, maximum, sd, mean, best_classifier):
-    with FileManager('metadata_file3', 'a', '.csv',
+    with FileManager('metadata_file4', 'a', '.csv',
                      'D:/PycharmProjects/FinalYearProject/MetaDataFiles') as f:
         f.write(f"{file},{columns},{rows},{minimum},{maximum},{sd},{mean},{best_classifier}\n")
 
@@ -303,82 +303,6 @@ def run_all_classifiers():
     print("number of errors --> ", error_count)
 
 
-# Runs all datasets in provided directory to ensure they will work for generating meta-dataset.
-# Writes the results to a file to check for anomalies, such as NAN
-# TODO: verify functionality remains the same - Done
-# TODO: Remove duplicate code - remove by 03/05/25
-def run_all_classifiers_old():
-    error_count = 0
-    for file in os.listdir(path_to_csvs):
-        logger.info(f"File to be classified --> {file}")
-        dataset, data, classes = preprocess_data(path_to_csvs, file)
-
-        # Classify for Support Vector Machine
-        try:
-            svm_classifier = svm.SVC()
-            svm_acc = cross_validation(svm_classifier, data, classes, "SVM", file)
-        except ValueError:
-            logger.error(f"{file} raised value error, skipping")
-            shutil.move(f"{path_to_csvs}/{file}", f"D:/PycharmProjects/FinalYearProject/inconsistentFailures/{file}")
-            error_count += 1
-            continue
-
-        svm_st = str(svm_acc)
-        svm_st = svm_st.replace("[", "")
-        svm_st = svm_st.replace("]", "")
-        svm_st = svm_st.replace(" ", "")
-        write_accuracy_score(file, "SVM", svm_st, statistics.mean(svm_acc))
-        logger.info(f"Classification for {file} using classifier SVM finished!")
-
-        # Classify for neural network
-        nn_classifier = MLPClassifier(max_iter=500)
-        nn_acc = cross_validation(nn_classifier, data, classes, "NN", file)
-
-        nn_st = str(nn_acc)
-        nn_st = nn_st.replace("[", "")
-        nn_st = nn_st.replace("]", "")
-        nn_st = nn_st.replace(" ", "")
-        write_accuracy_score(file, "NN", nn_st, statistics.mean(nn_acc))
-        logger.info(f"Classification for {file} using classifier NN finished!")
-
-        # Classify for random forrest
-        rf_classifier = RandomForestClassifier()
-        rf_acc = cross_validation(rf_classifier, data, classes, "RF", file)
-
-        rf_st = str(rf_acc)
-        rf_st = rf_st.replace("[", "")
-        rf_st = rf_st.replace("]", "")
-        rf_st = rf_st.replace(" ", "")
-        write_accuracy_score(file, "RF", rf_st, statistics.mean(rf_acc))
-        logger.info(f"Classification for {file} using classifier RF finished!")
-
-        # Classify for Logistic Regression
-        lr_classifier = LogisticRegression()
-        lr_acc = cross_validation(lr_classifier, data, classes, "LR", file)
-
-        lr_st = str(lr_acc)
-        lr_st = lr_st.replace("[", "")
-        lr_st = lr_st.replace("]", "")
-        lr_st = lr_st.replace(" ", "")
-        write_accuracy_score(file, "LR", lr_st, statistics.mean(lr_acc))
-        logger.info(f"Classification for {file} using classifier LR finished!")
-
-        # Classify for Naive Bayes
-        nb_classifier = GaussianNB()
-        nb_acc = cross_validation(nb_classifier, data, classes, "NB", file)
-
-        nb_st = str(nb_acc)
-        nb_st = nb_st.replace("[", "")
-        nb_st = nb_st.replace("]", "")
-        nb_st = nb_st.replace(" ", "")
-        write_accuracy_score(file, "NB", nb_st, statistics.mean(nb_acc))
-        logger.info(f"Classification for {file} using classifier NB finished!")
-
-        # Once all 5 classifiers are complete move the dataset to new folder
-        shutil.move(f"{path_to_csvs}/{file}", f"D:/PycharmProjects/FinalYearProject/completedDatasets/{file}")
-    print("number of errors --> ", error_count)
-
-
 # Cross validation method
 # TODO: Remove duplicate code - remove by 03/01/25
 def cross_validation(classifier, data, classes, classifier_name, file):
@@ -506,7 +430,7 @@ def create_meta_dataset():
         shutil.move(f"{path_to_csvs}/{file}", f"D:/PycharmProjects/FinalYearProject/completedDatasets/{file}")
 
 
-# TODO: verify functionality remains the same
+# TODO: verify functionality remains the same - Done
 # TODO: remove duplicate code
 def create_meta_dataset_old():
     error_count = 0
@@ -593,6 +517,50 @@ def create_meta_dataset_old():
 
 # Predict the best classifier using created meta-dataset
 def classify_metafile():
+    file = "metadata_file4.csv"
+    path_to_meta = "D:/PycharmProjects/FinalYearProject/MetaDataFiles"
+    dataset, data, classes = preprocess_data(path_to_meta, file)
+
+    svm_classifier = Classifier(svm.SVC(), 'Support Vector Machine')
+    svm_classifier.cross_validation(data, classes, file)
+    svm_sd, svm_mean, svm_max, svm_min = svm_classifier.calculate_stats()
+
+    nn_classifier = Classifier(MLPClassifier(max_iter=500), 'Neural Network')
+    nn_classifier.cross_validation(data, classes, file)
+    nn_sd, nn_mean, nn_max, nn_min = nn_classifier.calculate_stats()
+
+    rf_classifier = Classifier(RandomForestClassifier(), 'Random Forest')
+    rf_classifier.cross_validation(data, classes, file)
+    rf_sd, rf_mean, rf_max, rf_min = rf_classifier.calculate_stats()
+
+    lr_classifier = Classifier(LogisticRegression(), 'Logistic Regression')
+    lr_classifier.cross_validation(data, classes, file)
+    lr_sd, lr_mean, lr_max, lr_min = lr_classifier.calculate_stats()
+
+    nb_classifier = Classifier(GaussianNB(), 'Naive Bayes')
+    nb_classifier.cross_validation(data, classes, file)
+    nb_sd, nb_mean, nb_max, nb_min = nb_classifier.calculate_stats()
+
+    with FileManager('results_of_meta_file2', 'a', file_root=path_to_meta) as f:
+        f.write(f'Support Vector Machine cross-validation results: {svm_classifier.accuracies}\n')
+        f.write(f'Min: {svm_min}, Max: {svm_max}, Standard Deviation: {svm_sd}, Mean: {svm_mean}\n')
+
+        f.write(f'Neural Network cross-validation results: {nn_classifier.accuracies}\n')
+        f.write(f'Min: {nn_min}, Max: {nn_max}, Standard Deviation: {nn_sd}, Mean: {nn_mean}\n')
+
+        f.write(f'Random Forest cross-validation results: {rf_classifier.accuracies}\n')
+        f.write(f'Min: {rf_min}, Max: {rf_max}, Standard Deviation: {rf_sd}, Mean: {rf_mean}\n')
+
+        f.write(f'Logistic Regression cross-validation results: {lr_classifier.accuracies}\n')
+        f.write(f'Min: {lr_min}, Max: {lr_max}, Standard Deviation: {lr_sd}, Mean: {lr_mean}\n')
+
+        f.write(f'Naive Bayes cross-validation results: {nb_classifier.accuracies}\n')
+        f.write(f'Min: {nb_min}, Max: {nb_max}, Standard Deviation: {nb_sd}, Mean: {nb_mean}\n')
+
+
+# TODO: verify functionality remains the same - Done
+# TODO: remove duplicate code - remove by 03/05/25
+def classify_metafile_old():
     file = "final_metadata_file.csv"
     path_to_meta = "D:/PycharmProjects/FinalYearProject/MetaDataFiles"
     f = open("D:/PycharmProjects/FinalYearProject/MetaDataFiles/results_of_meta_file.txt", "a")
@@ -621,6 +589,7 @@ def classify_metafile():
     f.close()
 
 
+# TODO: remove redundant code once classify_meta_file_old() functionality confirmed
 # runs all the classifiers returning their accuracy scores for 10-fold cross-validation
 def classify_dataset(file, a, b):
     logger.info(f"run_all_classifiers: Beginning for file --> {file}")
@@ -651,10 +620,11 @@ def classify_dataset(file, a, b):
 
 # move_invalid_datasets()
 # run_all_classifiers()
-create_meta_dataset()
-# classify_metafile()
+# create_meta_dataset()
+classify_metafile()
 
 
+# TODO: convert these into more appropriate tests in test_classifier.py
 # -------------------- QUICK TESTS --------------------
 # test_classifier = Classifier(svm.SVC(), 'Support Vector Machine')
 # print(test_classifier)
