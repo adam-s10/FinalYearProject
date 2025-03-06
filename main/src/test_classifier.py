@@ -2,7 +2,8 @@ import logging
 import os
 import sys
 import unittest
-from classifier import FileManager
+from classifier import FileManager, Classifier
+from sklearn import svm
 
 
 class TestFileManager(unittest.TestCase):
@@ -54,6 +55,15 @@ class TestFileManager(unittest.TestCase):
         os.remove('D:/PycharmProjects/FinalYearProject/main/src/test_context_manager_suppresses_exception.txt')
         os.remove('D:/PycharmProjects/FinalYearProject/main/src/test_file_write.txt')
         logger.info('TestFileManager: tearDownClass finished, files deleted')
+
+
+class TestClassifier(unittest.TestCase):
+    def test_string_representation(self):
+        classifier_type = 'Support Vector Machine'
+        expected_result = 'Classifier of type ' + classifier_type
+        test_classifier = Classifier(svm.SVC(), classifier_type)
+        self.assertEquals(repr(test_classifier), expected_result,
+                          'String representation of class was not returned as expected!')
 
 
 logger = logging.getLogger()

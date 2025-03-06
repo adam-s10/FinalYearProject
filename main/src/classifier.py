@@ -47,7 +47,7 @@ class Classifier:
         if not isinstance(classifier_name, str):
             raise ValueError('Variable classifier_name should be of type str')
 
-        self.classifier = classifier
+        self.classifier_type = classifier
         self.classifier_name = classifier_name
         self.accuracies = []
 
@@ -55,8 +55,7 @@ class Classifier:
         logger.info(f"cross_validation: Classification for {file} using classifier {self.classifier_name} starting:")
         data = data.to_numpy()  # convert to numpy array
         classes = classes.values.tolist()  # convert to list
-        # acc = []  # create list to store accuracies
-        skf = StratifiedKFold(n_splits=n_splits, shuffle=True)  # n-fold split with data shuffle
+        skf = StratifiedKFold(n_splits, shuffle=True)  # n-fold split with data shuffle
         skf.get_n_splits(data, classes)  # get the splits using skf
         for train_index, test_index in skf.split(data, classes):  # split the data
             # get train and test data
@@ -65,9 +64,9 @@ class Classifier:
             test_d = data[test_index]
             test_c = [classes[j] for j in test_index]
 
-            self.classifier.fit(train_d, train_c)  # classify
+            self.classifier_type.fit(train_d, train_c)  # classify
             # Evaluate model on testing data
-            y_pred = self.classifier.predict(test_d)
+            y_pred = self.classifier_type.predict(test_d)
             a = accuracy_score(y_pred, test_c)  # get accuracy
             self.accuracies.append(a)  # add accuracy to list
         logger.info(f"cross_validation: Cross validation scores for {file} using classifier {self.classifier_name} "
@@ -125,6 +124,11 @@ handler.setFormatter(formatter)
 logger.addHandler(handler)
 
 path_to_csvs = "D:/PycharmProjects/FinalYearProject/csvDatasets"
+SVM = 'Support Vector Machine'
+NEURAL_NETWORK = 'Neural Network'
+RANDOM_FOREST = 'Random Forest'
+LOGISTIC_REGRESSION = 'Logistic Regression'
+NAIVE_BAYES = 'Naive Bayes'
 
 
 # writes accuracy scores to a text file
@@ -147,11 +151,11 @@ def run_all_classifiers():
     error_count = 0
     for file in os.listdir(path_to_csvs):
         logger.info(f"File to be classified --> {file}")
-        dataset, data, classes = preprocess_data(path_to_csvs, file)
+        _, data, classes = preprocess_data(path_to_csvs, file)
 
         # Classify for Support Vector Machine
         try:
-            svm_classifier = Classifier(svm.SVC(), 'Support Vector Machine')
+            svm_classifier = Classifier(svm.SVC(), SVM)
             svm_acc = svm_classifier.cross_validation(data, classes, file)
         except ValueError:
             logger.error(f"{file} raised value error, skipping")
@@ -164,7 +168,7 @@ def run_all_classifiers():
         logger.info(f"Classification for {file} using classifier SVM finished!")
 
         # Classify for Neural Network
-        nn_classifier = Classifier(MLPClassifier(max_iter=500), 'Neural Network')
+        nn_classifier = Classifier(MLPClassifier(max_iter=500), NEURAL_NETWORK)
         nn_acc = nn_classifier.cross_validation(data, classes, file)
 
         nn_acc_str = ','.join(map(str, nn_acc))
@@ -172,7 +176,7 @@ def run_all_classifiers():
         logger.info(f"Classification for {file} using classifier NN finished!")
 
         # Classify for Random Forest
-        rf_classifier = Classifier(RandomForestClassifier(), 'Random Forest')
+        rf_classifier = Classifier(RandomForestClassifier(), RANDOM_FOREST)
         rf_acc = rf_classifier.cross_validation(data, classes, file)
 
         rf_acc_str = ','.join(map(str, rf_acc))
@@ -180,7 +184,7 @@ def run_all_classifiers():
         logger.info(f"Classification for {file} using classifier RF finished!")
 
         # Classify for Logistic Regression
-        lr_classifier = Classifier(LogisticRegression(), 'Logistic Regression')
+        lr_classifier = Classifier(LogisticRegression(), LOGISTIC_REGRESSION)
         lr_acc = lr_classifier.cross_validation(data, classes, file)
 
         lr_acc_str = ','.join(map(str, lr_acc))
@@ -188,7 +192,7 @@ def run_all_classifiers():
         logger.info(f"Classification for {file} using classifier LR finished!")
 
         # Classify for Naive Bayes
-        nb_classifier = Classifier(GaussianNB(), 'Naive Bayes')
+        nb_classifier = Classifier(GaussianNB(), NAIVE_BAYES)
         nb_acc = nb_classifier.cross_validation(data, classes, file)
 
         nb_acc_str = ','.join(map(str, nb_acc))
@@ -217,7 +221,7 @@ def create_meta_dataset():
         columns = float(dataset.shape[1])  # Get columns using pandas
 
         # Classify for Support Vector Machine
-        svm_classifier = Classifier(svm.SVC(), 'Support Vector Machine')
+        svm_classifier = Classifier(svm.SVC(), SVM)
         svm_classifier.cross_validation(data, classes, file)
         svm_sd, svm_mean, svm_max, svm_min = svm_classifier.calculate_stats()
         logger.info(f"create_meta_dataset: SVM returned mean --> {svm_mean}")
@@ -226,7 +230,7 @@ def create_meta_dataset():
         logger.info(f"create_meta_dataset: SVM returned maximum --> {svm_max}")
 
         # Classify for neural network
-        nn_classifier = Classifier(MLPClassifier(max_iter=500), 'Neural Network')
+        nn_classifier = Classifier(MLPClassifier(max_iter=500), NEURAL_NETWORK)
         nn_classifier.cross_validation(data, classes, file)
         nn_sd, nn_mean, nn_max, nn_min = nn_classifier.calculate_stats()
         logger.info(f"create_meta_dataset: NN returned mean --> {nn_mean}")
@@ -235,7 +239,7 @@ def create_meta_dataset():
         logger.info(f"create_meta_dataset: NN returned maximum --> {nn_max}")
 
         # Classify for random forrest
-        rf_classifier = Classifier(RandomForestClassifier(), 'Random Forest')
+        rf_classifier = Classifier(RandomForestClassifier(), RANDOM_FOREST)
         rf_classifier.cross_validation(data, classes, file)
         rf_sd, rf_mean, rf_max, rf_min = rf_classifier.calculate_stats()
         logger.info(f"create_meta_dataset: RF returned mean --> {rf_mean}")
@@ -244,7 +248,7 @@ def create_meta_dataset():
         logger.info(f"create_meta_dataset: RF returned maximum --> {rf_max}")
 
         # Classify for Logistic Regression
-        lr_classifier = Classifier(LogisticRegression(), 'Logistic Regression')
+        lr_classifier = Classifier(LogisticRegression(), LOGISTIC_REGRESSION)
         lr_classifier.cross_validation(data, classes, file)
         lr_sd, lr_mean, lr_max, lr_min = lr_classifier.calculate_stats()
         logger.info(f"create_meta_dataset: LR returned mean --> {lr_mean}")
@@ -253,7 +257,7 @@ def create_meta_dataset():
         logger.info(f"create_meta_dataset: LR returned maximum --> {lr_max}")
 
         # Classify for Naive Bayes
-        nb_classifier = Classifier(GaussianNB(), 'Naive Bayes')
+        nb_classifier = Classifier(GaussianNB(), NAIVE_BAYES)
         nb_classifier.cross_validation(data, classes, file)
         nb_sd, nb_mean, nb_max, nb_min = nb_classifier.calculate_stats()
         logger.info(f"create_meta_dataset: NB returned mean --> {nb_mean}")
@@ -290,25 +294,25 @@ def create_meta_dataset():
 def classify_metafile():
     file = "metadata_file4.csv"
     path_to_meta = "D:/PycharmProjects/FinalYearProject/MetaDataFiles"
-    dataset, data, classes = preprocess_data(path_to_meta, file)
+    _, data, classes = preprocess_data(path_to_meta, file)
 
-    svm_classifier = Classifier(svm.SVC(), 'Support Vector Machine')
+    svm_classifier = Classifier(svm.SVC(), SVM)
     svm_classifier.cross_validation(data, classes, file)
     svm_sd, svm_mean, svm_max, svm_min = svm_classifier.calculate_stats()
 
-    nn_classifier = Classifier(MLPClassifier(max_iter=500), 'Neural Network')
+    nn_classifier = Classifier(MLPClassifier(max_iter=500), NEURAL_NETWORK)
     nn_classifier.cross_validation(data, classes, file)
     nn_sd, nn_mean, nn_max, nn_min = nn_classifier.calculate_stats()
 
-    rf_classifier = Classifier(RandomForestClassifier(), 'Random Forest')
+    rf_classifier = Classifier(RandomForestClassifier(), RANDOM_FOREST)
     rf_classifier.cross_validation(data, classes, file)
     rf_sd, rf_mean, rf_max, rf_min = rf_classifier.calculate_stats()
 
-    lr_classifier = Classifier(LogisticRegression(), 'Logistic Regression')
+    lr_classifier = Classifier(LogisticRegression(), LOGISTIC_REGRESSION)
     lr_classifier.cross_validation(data, classes, file)
     lr_sd, lr_mean, lr_max, lr_min = lr_classifier.calculate_stats()
 
-    nb_classifier = Classifier(GaussianNB(), 'Naive Bayes')
+    nb_classifier = Classifier(GaussianNB(), NAIVE_BAYES)
     nb_classifier.cross_validation(data, classes, file)
     nb_sd, nb_mean, nb_max, nb_min = nb_classifier.calculate_stats()
 
@@ -332,7 +336,7 @@ def classify_metafile():
 # move_invalid_datasets()
 # run_all_classifiers()
 # create_meta_dataset()
-classify_metafile()
+# classify_metafile()
 
 
 # TODO: convert these into more appropriate tests in test_classifier.py
