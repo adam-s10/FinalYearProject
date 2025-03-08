@@ -64,7 +64,7 @@ def download_datasets(dataset_list_as_strings):
 # Method to extract all zip files downloaded from kaggle api
 @deprecation.deprecated(deprecated_in="Sprint 2",
                         details="Dangerous when handling large amount of files to be unzipped (potential Zip Bomb). "
-                                "Use extract_data in dataManager.py instead.")
+                                "Use extract_data in data_manager.py instead.")
 def extract_data(directory):
     extracted_locations = []
     for word in directory:  # for each directory in the parent directory
