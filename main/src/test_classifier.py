@@ -2,7 +2,7 @@ import logging
 import os
 import sys
 import unittest
-from classifier import FileManager, Classifier
+from classifier import FileManager, Classifier, preprocess_data
 from sklearn import svm
 
 
@@ -58,12 +58,33 @@ class TestFileManager(unittest.TestCase):
 
 
 class TestClassifier(unittest.TestCase):
-    def test_string_representation(self):
+    @classmethod
+    def setUpClass(cls):
         classifier_type = 'Support Vector Machine'
-        expected_result = 'Classifier of type ' + classifier_type
-        test_classifier = Classifier(svm.SVC(), classifier_type)
-        self.assertEquals(repr(test_classifier), expected_result,
-                          'String representation of class was not returned as expected!')
+        cls.test_classifier = Classifier(svm.SVC(), classifier_type)
+
+    def test_empty_accuracies_raises_exception(self):
+        self.assertRaises(ValueError, self.test_classifier.calculate_stats)
+
+    def test_string_representation(self):
+        expected_result = 'Classifier of type Support Vector Machine'
+        self.assertEqual(repr(self.test_classifier), expected_result,
+                         'String representation of class was not returned as expected!')
+
+    def test_cross_validation_populates_accuracies(self):
+        test_file_path = 'D:/PycharmProjects/FinalYearProject/test_files'
+        test_file = 'updated_01-01-01-01-01-01-02.csv'
+        _, data, classes = preprocess_data(test_file_path, test_file)
+
+        default_accuracies_length = 0
+        expected_accuracies_length = 10
+        
+        self.test_classifier.cross_validation(data, classes, test_file)
+        self.assertNotEqual(len(self.test_classifier.accuracies), default_accuracies_length,
+                            'Accuracies was not populated by cross_validation')
+        self.assertEqual(len(self.test_classifier.accuracies), expected_accuracies_length,
+                         '10-fold cross validation did not produce 10 results')
+        self.test_classifier.accuracies.clear()
 
 
 logger = logging.getLogger()

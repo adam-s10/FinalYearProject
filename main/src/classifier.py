@@ -78,6 +78,9 @@ class Classifier:
     # Uses values stored in self.accuracies (generated using cross_validation method) to calculate standard deviation,
     # mean, maximum and minimum for those accuracies
     def calculate_stats(self):
+        if not self.accuracies:
+            raise ValueError('Populate accuracies list before using calculate_stats()')
+
         standard_deviation = statistics.stdev(self.accuracies)
         mean = statistics.mean(self.accuracies)
         maximum = max(self.accuracies)
